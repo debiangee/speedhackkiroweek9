@@ -1,6 +1,6 @@
 {
-  "name": "Weather Lang — Your PH Weather Companion",
-  "short_name": "Weather Lang",
+  "name": "Team Weather Lang — Your PH Weather Companion",
+  "short_name": "Team Weather Lang",
   "description": "Your everyday Philippine weather companion. Real-time rain forecasts, hourly updates, and travel-ready insights.",
   "start_url": "/",
   "display": "standalone",

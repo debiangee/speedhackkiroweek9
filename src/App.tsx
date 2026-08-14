@@ -34,7 +34,7 @@ function App() {
       </main>
       <footer className="app-footer">
         <div className="footer-credits">
-          <span>Weather Lang &copy; {new Date().getFullYear()}</span>
+          <span>Team Weather Lang &copy; {new Date().getFullYear()}</span>
         </div>
       </footer>
       <Analytics />

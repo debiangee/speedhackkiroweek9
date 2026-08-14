@@ -50,7 +50,7 @@ export default function WeatherSignalPanel({ region, cityCoords }: WeatherSignal
   const rainfallColor = RAINFALL_COLORS[signal.rainfallWarning];
 
   const handleShare = async () => {
-    const text = `${signal.tcwsLabel} active in ${region}. Max wind: ${signal.maxWindGust}km/h. ${signal.rainfallLabel}. Stay safe! - Weather Lang`;
+    const text = `${signal.tcwsLabel} active in ${region}. Max wind: ${signal.maxWindGust}km/h. ${signal.rainfallLabel}. Stay safe! - Team Weather Lang`;
 
     if (navigator.share) {
       try {

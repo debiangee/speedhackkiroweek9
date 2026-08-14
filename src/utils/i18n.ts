@@ -3,7 +3,7 @@
 export type Locale = 'en' | 'fil';
 
 const translations: Record<string, Record<Locale, string>> = {
-  'app.title': { en: 'Weather Lang', fil: 'Weather Lang' },
+  'app.title': { en: 'Team Weather Lang', fil: 'Team Weather Lang' },
   'app.subtitle': { en: 'Your PH Weather Companion', fil: 'Kasama Mo sa Panahon' },
   'app.tagline': { en: 'Real-time forecasts, made simple', fil: 'Live forecast, simple lang' },
   'dashboard.loading': { en: 'Fetching live weather data...', fil: 'Kinukuha ang live na datos ng panahon...' },

@@ -20,7 +20,7 @@ export function ShareForecast({ region, daily, selectedCity }: ShareForecastProp
   const shareText = `${location} Weather\n` +
     `Rain: ${today.avg_prob}% chance | ${today.total_rain}mm expected\n` +
     `Temp: ${today.min_temp}°–${today.max_temp}°C\n` +
-    `— via Weather Lang`;
+    `— via Team Weather Lang`;
 
   async function handleShare() {
     if (navigator.share) {
