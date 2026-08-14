@@ -1,6 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import { useEffect, useState, useRef } from 'react';
 import './WeatherRiskMap.css';
 
 interface RadarFrame {
@@ -16,14 +14,15 @@ interface RainViewerData {
   };
 }
 
-// Philippines center coordinates
-const PH_CENTER: [number, number] = [12.8797, 121.774];
-const PH_ZOOM = 6;
+// Philippines center
+const PH_LAT = 12.5;
+const PH_LON = 121.5;
+const ZOOM = 5;
+const SIZE = 512;
+const COLOR_SCHEME = 2; // Universal Blue color scheme
+const OPTIONS = '1_1'; // smooth=1, snow=1
 
 export function WeatherRiskMap() {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const leafletMap = useRef<L.Map | null>(null);
-  const radarLayer = useRef<L.TileLayer | null>(null);
   const [frames, setFrames] = useState<RadarFrame[]>([]);
   const [host, setHost] = useState('');
   const [currentFrame, setCurrentFrame] = useState(0);
@@ -31,30 +30,6 @@ export function WeatherRiskMap() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Initialize the map
-  useEffect(() => {
-    if (!mapRef.current || leafletMap.current) return;
-
-    leafletMap.current = L.map(mapRef.current, {
-      center: PH_CENTER,
-      zoom: PH_ZOOM,
-      zoomControl: true,
-      attributionControl: true,
-    });
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      maxZoom: 18,
-    }).addTo(leafletMap.current);
-
-    return () => {
-      if (leafletMap.current) {
-        leafletMap.current.remove();
-        leafletMap.current = null;
-      }
-    };
-  }, []);
 
   // Fetch RainViewer radar data
   useEffect(() => {
@@ -72,27 +47,11 @@ export function WeatherRiskMap() {
 
         setHost(data.host);
         setFrames(allFrames);
-        // Start at the most recent hourly frame
+        // Start at the last past frame (most recent actual data)
         const pastLen = data.radar.past.length;
-        const hourMap = new Map<number, number>();
-        allFrames.forEach((frame, idx) => {
-          const hourKey = Math.floor(frame.time / 3600);
-          if (!hourMap.has(hourKey)) {
-            hourMap.set(hourKey, idx);
-          }
-        });
-        const hourIndices = Array.from(hourMap.values()).sort((a, b) => a - b);
-        // Find the closest hourly index to the most recent past frame
-        let startIdx = hourIndices[hourIndices.length - 1] ?? pastLen - 1;
-        for (const idx of hourIndices) {
-          if (idx >= pastLen - 1) {
-            startIdx = idx;
-            break;
-          }
-        }
-        setCurrentFrame(startIdx);
+        setCurrentFrame(Math.max(0, pastLen - 1));
         setError(null);
-      } catch (e) {
+      } catch {
         setError('Could not load radar data. Please try again later.');
       } finally {
         setLoading(false);
@@ -100,72 +59,26 @@ export function WeatherRiskMap() {
     }
 
     fetchRadarData();
-    // Refresh every 5 minutes
     const refreshInterval = setInterval(fetchRadarData, 5 * 60 * 1000);
     return () => clearInterval(refreshInterval);
   }, []);
 
-  // Update radar tile layer when frame changes
+  // Animation playback
   useEffect(() => {
-    if (!leafletMap.current || !host || frames.length === 0) return;
-
-    const frame = frames[currentFrame];
-    if (!frame) return;
-
-    if (radarLayer.current) {
-      leafletMap.current.removeLayer(radarLayer.current);
-    }
-
-    radarLayer.current = L.tileLayer(
-      `${host}${frame.path}/256/{z}/{x}/{y}/2/1_1.png`,
-      {
-        opacity: 0.7,
-        zIndex: 10,
-        attribution: '<a href="https://www.rainviewer.com/" target="_blank">RainViewer</a>',
-      }
-    );
-
-    radarLayer.current.addTo(leafletMap.current);
-  }, [currentFrame, frames, host]);
-
-  // Group frames by hour and pick the closest frame per hour
-  function getHourlyFrameIndices(): number[] {
-    if (frames.length === 0) return [];
-    const hourMap = new Map<number, number>(); // hour key -> frame index
-    frames.forEach((frame, idx) => {
-      const hourKey = Math.floor(frame.time / 3600);
-      if (!hourMap.has(hourKey)) {
-        hourMap.set(hourKey, idx);
-      }
-    });
-    return Array.from(hourMap.values()).sort((a, b) => a - b);
-  }
-
-  const hourlyIndices = getHourlyFrameIndices();
-
-  // Animation playback (hour by hour)
-  useEffect(() => {
-    if (playing && hourlyIndices.length > 0) {
+    if (playing && frames.length > 0) {
       intervalRef.current = setInterval(() => {
-        setCurrentFrame((prev) => {
-          const currentHourIdx = hourlyIndices.indexOf(prev);
-          const nextHourIdx = (currentHourIdx + 1) % hourlyIndices.length;
-          return hourlyIndices[nextHourIdx];
-        });
-      }, 1000);
+        setCurrentFrame((prev) => (prev + 1) % frames.length);
+      }, 800);
     } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
     }
-
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+      if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [playing, hourlyIndices.length]);
+  }, [playing, frames.length]);
 
   function getFrameLabel(frame: RadarFrame | undefined): string {
     if (!frame) return '';
@@ -175,6 +88,20 @@ export function WeatherRiskMap() {
       minute: '2-digit',
       hour12: true,
     });
+  }
+
+  function getFrameType(index: number, pastCount: number): string {
+    if (index < pastCount) return 'past';
+    return 'forecast';
+  }
+
+  const pastCount = frames.length > 0
+    ? frames.filter((_, i) => i < frames.length - (frames.length > 12 ? frames.length - 12 : 0)).length
+    : 0;
+
+  // Build tile URL for coordinate-based rendering
+  function getRadarTileUrl(frame: RadarFrame): string {
+    return `${host}${frame.path}/${SIZE}/${ZOOM}/${PH_LAT}/${PH_LON}/${COLOR_SCHEME}/${OPTIONS}.png`;
   }
 
   return (
@@ -188,13 +115,35 @@ export function WeatherRiskMap() {
 
       {error && (
         <div className="risk-map-error">
-          <span>{error}</span>
+          <span>⚠️ {error}</span>
         </div>
       )}
 
-      <div ref={mapRef} className="risk-map-container" />
+      {/* Radar image display */}
+      <div className="risk-map-viewport">
+        {/* Base map (static) */}
+        <img
+          className="risk-map-basemap"
+          src={`https://tile.openstreetmap.org/${ZOOM}/${Math.floor((PH_LON + 180) / 360 * (1 << ZOOM))}/${Math.floor((1 - Math.log(Math.tan(PH_LAT * Math.PI / 180) + 1 / Math.cos(PH_LAT * Math.PI / 180)) / Math.PI) / 2 * (1 << ZOOM))}.png`}
+          alt=""
+          aria-hidden="true"
+          draggable={false}
+        />
+        {/* Use the RainViewer coordinate-based tile as radar overlay */}
+        {frames.length > 0 && host && frames[currentFrame] && (
+          <img
+            className="risk-map-radar-img"
+            src={getRadarTileUrl(frames[currentFrame])}
+            alt={`Rain radar at ${getFrameLabel(frames[currentFrame])}`}
+            draggable={false}
+          />
+        )}
+        {/* Philippines outline overlay label */}
+        <div className="risk-map-region-label">Philippines</div>
+      </div>
 
-      {frames.length > 0 && hourlyIndices.length > 0 && (
+      {/* Controls */}
+      {frames.length > 0 && (
         <div className="risk-map-controls">
           <button
             className="risk-map-play-btn"
@@ -204,27 +153,42 @@ export function WeatherRiskMap() {
             {playing ? '⏸' : '▶'}
           </button>
 
-          <input
-            type="range"
-            className="risk-map-slider"
-            min={0}
-            max={hourlyIndices.length - 1}
-            value={hourlyIndices.indexOf(currentFrame) !== -1 ? hourlyIndices.indexOf(currentFrame) : 0}
-            onChange={(e) => {
-              setPlaying(false);
-              const hourIdx = Number(e.target.value);
-              setCurrentFrame(hourlyIndices[hourIdx]);
-            }}
-            step={1}
-            aria-label="Radar frame timeline (hour by hour)"
-          />
+          <div className="risk-map-slider-container">
+            <input
+              type="range"
+              className="risk-map-slider"
+              min={0}
+              max={frames.length - 1}
+              value={currentFrame}
+              onChange={(e) => {
+                setPlaying(false);
+                setCurrentFrame(Number(e.target.value));
+              }}
+              step={1}
+              aria-label="Radar frame timeline"
+            />
+            <div className="risk-map-slider-ticks">
+              {frames.map((_, i) => (
+                <span
+                  key={i}
+                  className={`slider-tick ${i === currentFrame ? 'active' : ''} ${getFrameType(i, pastCount)}`}
+                />
+              ))}
+            </div>
+          </div>
 
-          <span className="risk-map-time">
-            {getFrameLabel(frames[currentFrame])}
-          </span>
+          <div className="risk-map-time-info">
+            <span className="risk-map-time">
+              {getFrameLabel(frames[currentFrame])}
+            </span>
+            {currentFrame >= pastCount && (
+              <span className="risk-map-forecast-badge">Forecast</span>
+            )}
+          </div>
         </div>
       )}
 
+      {/* Legend */}
       <div className="risk-map-legend">
         <span className="legend-title">Precipitation Intensity</span>
         <div className="legend-bar">
@@ -235,7 +199,9 @@ export function WeatherRiskMap() {
       </div>
 
       <p className="risk-map-attribution">
-        Live radar data from <a href="https://www.rainviewer.com/" target="_blank" rel="noopener noreferrer">RainViewer</a>
+        Live radar from <a href="https://www.rainviewer.com/" target="_blank" rel="noopener noreferrer">RainViewer</a>
+        {' · '}Map ©{' '}
+        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>
       </p>
     </div>
   );
