@@ -122,6 +122,22 @@ export function WeatherRiskMap() {
 
       {/* Radar image display */}
       <div className="risk-map-viewport">
+        {/* Philippines outline SVG for geographic context */}
+        <svg className="risk-map-outline" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+          {/* Simplified PH outline — Luzon, Visayas, Mindanao */}
+          <g fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="1.2">
+            {/* Luzon */}
+            <path d="M280,80 L295,85 L310,100 L315,120 L320,140 L310,160 L300,180 L295,200 L280,210 L270,200 L260,190 L255,170 L250,150 L245,130 L250,110 L260,95 Z" />
+            {/* Visayas */}
+            <path d="M240,260 L260,255 L275,260 L285,270 L280,280 L265,285 L250,280 Z" />
+            <path d="M290,255 L305,260 L310,270 L305,280 L295,275 Z" />
+            {/* Mindanao */}
+            <path d="M260,310 L280,300 L300,305 L320,310 L325,330 L320,350 L310,360 L290,365 L270,360 L260,345 L255,330 Z" />
+            {/* Palawan */}
+            <path d="M200,180 L205,200 L210,230 L215,260 L218,290 L215,310 L210,330" />
+          </g>
+        </svg>
+
         {/* Use the RainViewer coordinate-based tile as radar overlay */}
         {frames.length > 0 && host && frames[currentFrame] && (
           <img
@@ -130,18 +146,16 @@ export function WeatherRiskMap() {
             alt={`Rain radar at ${getFrameLabel(frames[currentFrame])}`}
             draggable={false}
             onError={(e) => {
-              // If coordinate tile fails, try without the decimal issue
               const img = e.currentTarget;
               if (!img.dataset.retried) {
                 img.dataset.retried = 'true';
                 const frame = frames[currentFrame];
-                // Fallback: use slightly different coordinates
                 img.src = `${host}${frame.path}/${SIZE}/${ZOOM}/12.8797/121.7740/${COLOR_SCHEME}/${OPTIONS}.png`;
               }
             }}
           />
         )}
-        {/* No rain indicator when image loads but shows nothing */}
+        {/* No rain indicator */}
         {frames.length > 0 && !loading && !error && (
           <div className="risk-map-no-rain-hint">
             Dark areas = no precipitation detected
