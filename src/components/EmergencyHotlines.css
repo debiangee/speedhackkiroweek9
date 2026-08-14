@@ -1,0 +1,190 @@
+/* --- Emergency Hotlines --- */
+.emergency-hotlines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.hotlines-section-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 0.2rem;
+}
+
+.hotlines-source {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin: 0 0 0.6rem;
+}
+
+.hotlines-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+/* Individual hotline card */
+.hotline-card {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  text-decoration: none;
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.hotline-card:hover,
+.hotline-card:focus {
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.12);
+  transform: translateY(-1px);
+}
+
+.hotline-card:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* Color accent by type */
+.hotline-disaster { border-left: 3px solid #e65100; }
+.hotline-police { border-left: 3px solid #1565c0; }
+.hotline-fire { border-left: 3px solid #c62828; }
+.hotline-medical { border-left: 3px solid #2e7d32; }
+.hotline-rescue { border-left: 3px solid #ad1457; }
+.hotline-general { border-left: 3px solid #5e35b1; }
+
+.hotline-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.hotline-name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hotline-type-badge {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+}
+
+.hotline-number {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  letter-spacing: 0.3px;
+}
+
+.hotline-tap-hint {
+  font-size: 0.58rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.hotline-card:hover .hotline-tap-hint,
+.hotline-card:focus .hotline-tap-hint {
+  opacity: 1;
+}
+
+/* National toggle button */
+.hotlines-national-toggle {
+  background: none;
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+  padding: 0.5rem;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.hotlines-national-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* National section */
+.hotlines-national {
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+/* Disclaimer */
+.hotlines-disclaimer {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-top: 0.6rem;
+  line-height: 1.5;
+}
+
+.hotlines-disclaimer a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.hotlines-disclaimer a:hover {
+  text-decoration: underline;
+}
+
+.hotlines-fallback {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Mobile touch targets */
+@media (max-width: 600px) {
+  .hotline-card {
+    padding: 0.75rem 0.85rem;
+    min-height: 48px;
+  }
+
+  .hotline-tap-hint {
+    opacity: 1;
+  }
+
+  .hotline-name {
+    font-size: 0.74rem;
+  }
+
+  .hotline-number {
+    font-size: 0.82rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .hotline-card {
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+
+  .hotline-info {
+    flex-basis: 100%;
+  }
+
+  .hotline-number {
+    font-size: 0.9rem;
+  }
+
+  .hotline-tap-hint {
+    display: none;
+  }
+}

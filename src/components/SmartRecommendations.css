@@ -1,0 +1,139 @@
+/* ============================================
+   SMART RECOMMENDATIONS — Cinematic alert cards
+   ============================================ */
+
+.smart-recs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.rec-card {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1.5px solid;
+  transition: all var(--transition-fast);
+  animation: fadeInUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Stagger rec cards */
+.rec-card:nth-child(1) { animation-delay: 0.03s; }
+.rec-card:nth-child(2) { animation-delay: 0.09s; }
+.rec-card:nth-child(3) { animation-delay: 0.15s; }
+.rec-card:nth-child(4) { animation-delay: 0.21s; }
+
+.rec-card:hover {
+  transform: translateX(3px);
+  box-shadow: var(--shadow-sm);
+}
+
+.rec-safe {
+  background: var(--success-light);
+  border-color: var(--success);
+}
+
+.rec-caution {
+  background: var(--warning-light);
+  border-color: var(--warning);
+}
+
+.rec-warning {
+  background: rgba(234, 88, 12, 0.06);
+  border-color: #e65100;
+}
+
+[data-theme="dark"] .rec-warning {
+  background: rgba(234, 88, 12, 0.1);
+  border-color: #e65100;
+}
+
+.rec-danger {
+  background: var(--danger-light);
+  border-color: var(--danger);
+}
+
+.rec-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.rec-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.rec-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: block;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.rec-desc {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0.15rem 0 0;
+}
+
+.rec-badge {
+  flex-shrink: 0;
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0.25rem 0.55rem;
+  border-radius: 20px;
+}
+
+.rec-badge-safe {
+  background: var(--success);
+  color: white;
+}
+
+.rec-badge-caution {
+  background: var(--warning);
+  color: white;
+}
+
+.rec-badge-warning {
+  background: #e65100;
+  color: white;
+}
+
+.rec-badge-danger {
+  background: var(--danger);
+  color: white;
+}
+
+@media (max-width: 600px) {
+  .rec-card {
+    padding: 0.65rem 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .rec-title {
+    font-size: 0.78rem;
+  }
+
+  .rec-desc {
+    font-size: 0.68rem;
+  }
+
+  .rec-badge {
+    font-size: 0.55rem;
+    padding: 0.15rem 0.4rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rec-card {
+    animation: none !important;
+  }
+}

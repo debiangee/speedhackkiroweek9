@@ -1,0 +1,57 @@
+/* ============================================
+   CITY SELECTOR — Chip grid with micro-interactions
+   ============================================ */
+
+.city-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.5rem 0;
+}
+
+.city-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.38rem 0.7rem;
+  border-radius: 20px;
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-card);
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.city-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.city-chip:active {
+  transform: scale(0.95);
+}
+
+.city-chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 2px 8px var(--accent-glow);
+}
+
+@media (max-width: 600px) {
+  .city-selector {
+    gap: 0.3rem;
+    padding: 0.4rem 0;
+  }
+
+  .city-chip {
+    padding: 0.3rem 0.55rem;
+    font-size: 0.68rem;
+  }
+}

@@ -1,0 +1,95 @@
+/* ============================================
+   TYPHOON BANNER — Cinematic alert with slide-in
+   ============================================ */
+
+.typhoon-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.85rem 1.1rem;
+  background: var(--warning-light);
+  border: 1.5px solid var(--warning);
+  border-radius: var(--radius-md);
+  position: relative;
+  margin-bottom: 0.85rem;
+  animation: fadeInDown 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  box-shadow: 0 2px 12px rgba(234, 88, 12, 0.1);
+}
+
+.typhoon-icon {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+  animation: breathe 2.5s ease-in-out infinite;
+}
+
+.typhoon-content {
+  flex: 1;
+  padding-right: 1.5rem;
+}
+
+.typhoon-content strong {
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  display: block;
+  margin-bottom: 0.2rem;
+  letter-spacing: -0.01em;
+}
+
+.typhoon-content p {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.typhoon-dismiss {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  color: var(--text-muted);
+}
+
+.typhoon-dismiss:hover {
+  background: rgba(0, 0, 0, 0.06);
+  transform: scale(1.1);
+}
+
+.typhoon-dismiss:active {
+  transform: scale(0.9);
+}
+
+@media (max-width: 600px) {
+  .typhoon-banner {
+    padding: 0.7rem 0.85rem;
+    gap: 0.5rem;
+    border-radius: var(--radius-sm);
+  }
+
+  .typhoon-content strong {
+    font-size: 0.78rem;
+  }
+
+  .typhoon-content p {
+    font-size: 0.68rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typhoon-banner {
+    animation: none !important;
+  }
+
+  .typhoon-icon {
+    animation: none !important;
+  }
+}

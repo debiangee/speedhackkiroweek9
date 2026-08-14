@@ -1,0 +1,213 @@
+.activity-planner {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Activity selector tabs */
+.activity-selector {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.activity-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  border: 1.5px solid var(--border);
+  border-radius: 24px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.activity-chip:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.activity-chip.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+  box-shadow: 0 2px 10px rgba(59, 130, 246, 0.3);
+}
+
+.activity-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* Best day highlight */
+.activity-best-day {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.85rem;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 12px;
+  font-size: 0.78rem;
+  color: var(--text-primary);
+}
+
+/* Day rows */
+.activity-days {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.activity-day-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  transition: background 0.2s;
+  border-left: 3px solid transparent;
+}
+
+.activity-day-row:hover {
+  background: var(--bg-card-hover);
+}
+
+.activity-day-row.verdict-great {
+  border-left-color: #16a34a;
+}
+
+.activity-day-row.verdict-okay {
+  border-left-color: #d97706;
+}
+
+.activity-day-row.verdict-avoid {
+  border-left-color: #dc2626;
+}
+
+.day-verdict-icon {
+  flex-shrink: 0;
+}
+
+.day-label {
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 85px;
+  font-size: 0.74rem;
+}
+
+/* Score progress bar */
+.day-score-bar {
+  width: 60px;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.day-score-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.day-score-fill.verdict-fill-great {
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+}
+
+.day-score-fill.verdict-fill-okay {
+  background: linear-gradient(90deg, #fbbf24, #d97706);
+}
+
+.day-score-fill.verdict-fill-avoid {
+  background: linear-gradient(90deg, #f87171, #dc2626);
+}
+
+/* Score badge */
+.day-score-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 6px;
+  min-width: 28px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.day-score-badge.verdict-badge-great {
+  background: rgba(22, 163, 74, 0.1);
+  color: #16a34a;
+}
+
+.day-score-badge.verdict-badge-okay {
+  background: rgba(217, 119, 6, 0.1);
+  color: #d97706;
+}
+
+.day-score-badge.verdict-badge-avoid {
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+}
+
+.day-reason {
+  color: var(--text-secondary);
+  flex: 1;
+  font-size: 0.72rem;
+}
+
+/* Dark mode adjustments */
+:root[data-theme="dark"] .day-score-badge.verdict-badge-great {
+  background: rgba(22, 163, 74, 0.2);
+  color: #4ade80;
+}
+
+:root[data-theme="dark"] .day-score-badge.verdict-badge-okay {
+  background: rgba(217, 119, 6, 0.2);
+  color: #fbbf24;
+}
+
+:root[data-theme="dark"] .day-score-badge.verdict-badge-avoid {
+  background: rgba(220, 38, 38, 0.2);
+  color: #f87171;
+}
+
+:root[data-theme="dark"] .day-score-fill.verdict-fill-great {
+  background: linear-gradient(90deg, #4ade80, #22c55e);
+}
+
+:root[data-theme="dark"] .day-score-fill.verdict-fill-okay {
+  background: linear-gradient(90deg, #fbbf24, #f59e0b);
+}
+
+:root[data-theme="dark"] .day-score-fill.verdict-fill-avoid {
+  background: linear-gradient(90deg, #f87171, #ef4444);
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .activity-chip {
+    padding: 0.35rem 0.65rem;
+    font-size: 0.72rem;
+  }
+
+  .day-reason {
+    display: none;
+  }
+
+  .day-label {
+    min-width: 65px;
+    font-size: 0.7rem;
+  }
+
+  .day-score-bar {
+    width: 40px;
+  }
+}

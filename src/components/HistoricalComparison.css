@@ -1,0 +1,119 @@
+.historical-comparison {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.historical-loading,
+.historical-empty {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 1rem;
+}
+
+.historical-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.historical-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.6rem;
+  background: var(--bg-card);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  text-align: center;
+}
+
+.hist-label {
+  font-size: 0.62rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.hist-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.hist-diff {
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.hist-diff.wetter {
+  color: #2563eb;
+}
+
+.hist-diff.drier {
+  color: #f59e0b;
+}
+
+.hist-sub {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+}
+
+.historical-bar-compare {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bar-label {
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  min-width: 60px;
+}
+
+.bar-track {
+  flex: 1;
+  height: 12px;
+  background: var(--bg-card);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.6s ease;
+}
+
+.bar-current {
+  background: linear-gradient(90deg, var(--accent), #60a5fa);
+}
+
+.bar-lastyear {
+  background: linear-gradient(90deg, #9ca3af, #6b7280);
+}
+
+.bar-val {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 45px;
+  text-align: right;
+}
+
+@media (max-width: 600px) {
+  .historical-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .hist-value {
+    font-size: 0.95rem;
+  }
+}

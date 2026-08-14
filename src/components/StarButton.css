@@ -1,0 +1,42 @@
+/* ============================================
+   STAR BUTTON — Micro-interaction favorite toggle
+   ============================================ */
+
+.star-button {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.65rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.star-button:hover {
+  border-color: #f59e0b;
+  background: var(--warning-light);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
+}
+
+.star-button:active {
+  transform: scale(0.95);
+}
+
+.star-button.active {
+  border-color: #f59e0b;
+  background: var(--warning-light);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
+}
+
+.star-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.star-button.active .star-label {
+  color: #d97706;
+}

@@ -1,0 +1,154 @@
+/* ============================================
+   HOURLY TIMELINE — Slots + motion
+   ============================================ */
+
+.hourly-timeline {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.timeline-scroll {
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  padding: 0.5rem 0;
+  -webkit-overflow-scrolling: touch;
+  min-width: 0;
+  max-width: 100%;
+  scroll-snap-type: x mandatory;
+}
+
+.timeline-scroll::-webkit-scrollbar {
+  height: 3px;
+}
+
+.timeline-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.timeline-scroll::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 4px;
+}
+
+.hour-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 46px;
+  flex-shrink: 0;
+  padding: 0.5rem 0.2rem;
+  border-radius: var(--radius-sm);
+  scroll-snap-align: start;
+  transition: all var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+}
+
+.hour-slot:hover {
+  background: var(--bg-card-hover);
+  transform: translateY(-2px);
+}
+
+.hour-slot.current {
+  background: var(--warning-light);
+  border: 1.5px solid var(--warning);
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.15);
+}
+
+.hour-slot.current::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--warning);
+}
+
+.hour-time {
+  font-size: 0.58rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+.hour-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 18px;
+}
+
+.hour-prob-bar {
+  width: 30px;
+  min-height: 6px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: height 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hour-prob-text {
+  font-size: 0.55rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.hour-temp {
+  font-size: 0.62rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.timeline-loading {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 1rem;
+  font-size: 0.82rem;
+}
+
+/* Severity legend */
+.severity-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  justify-content: center;
+  padding-top: 0.6rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--border-color);
+  font-size: 0.6rem;
+  color: var(--text-secondary);
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-left: 0.4rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+@media (max-width: 600px) {
+  .hour-slot {
+    min-width: 40px;
+    padding: 0.35rem 0.1rem;
+  }
+
+  .hour-prob-bar {
+    width: 26px;
+  }
+
+  .hour-time {
+    font-size: 0.55rem;
+  }
+
+  .hour-icon {
+    height: 16px;
+  }
+}

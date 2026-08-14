@@ -1,0 +1,38 @@
+/* ============================================
+   DARK MODE TOGGLE — Smooth rotation
+   ============================================ */
+
+.dark-mode-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+.dark-mode-toggle::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  pointer-events: none;
+}
+
+.dark-mode-toggle:hover {
+  background: rgba(255, 255, 255, 0.22);
+  transform: scale(1.08) rotate(15deg);
+}
+
+.dark-mode-toggle:active {
+  transform: scale(0.92) rotate(-5deg);
+}

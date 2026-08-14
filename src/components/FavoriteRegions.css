@@ -1,0 +1,113 @@
+/* ============================================
+   FAVORITE REGIONS — Chip bar
+   ============================================ */
+
+.favorite-regions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.65rem 0.85rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 0.85rem;
+  min-width: 0;
+  max-width: 100%;
+  animation: fadeInUp 0.3s cubic-bezier(0.22, 1, 0.36, 1) 0.05s both;
+}
+
+.fav-label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.fav-chips {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.fav-chip {
+  display: flex;
+  align-items: center;
+  border-radius: 20px;
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-card-hover);
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+
+.fav-chip:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.fav-chip.active {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  box-shadow: 0 1px 4px var(--accent-glow);
+}
+
+.fav-chip-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.6rem;
+  border: none;
+  background: transparent;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--transition-fast);
+}
+
+.fav-chip.active .fav-chip-btn {
+  color: var(--accent);
+}
+
+.fav-chip-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem 0.4rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.4;
+  transition: all var(--transition-fast);
+  border-left: 1px solid var(--border-color);
+}
+
+.fav-chip-remove:hover {
+  opacity: 1;
+  background: var(--danger-light);
+}
+
+@media (max-width: 600px) {
+  .favorite-regions {
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .favorite-regions {
+    animation: none !important;
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "Optimization Loop Trigger",
+  "description": "When weather data logic or optimization engine code changes, re-run the build to verify the optimization loop still produces valid results. This creates a feedback loop: edit → build → verify → iterate.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "**/optimization-engine.ts",
+      "**/useWeatherData.ts",
+      "**/OptimizationPanel.tsx"
+    ]
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "npm run build"
+  }
+}

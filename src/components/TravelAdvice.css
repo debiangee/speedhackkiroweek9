@@ -1,0 +1,220 @@
+/* ============================================
+   TRAVEL ADVICE — Glassmorphism verdict card
+   ============================================ */
+
+.travel-advice {
+  border-radius: var(--radius-lg);
+  padding: 1.3rem;
+  border-left: 4px solid var(--accent);
+  box-shadow: var(--shadow-md);
+  background: var(--bg-card);
+  backdrop-filter: blur(var(--glass-blur));
+  border: var(--glass-border);
+  border-left: 4px solid var(--accent);
+  animation: fadeInUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.06s both;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.travel-advice:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.travel-advice-safe {
+  border-left-color: var(--success);
+  background: var(--success-light);
+}
+
+.travel-advice-caution {
+  border-left-color: var(--warning);
+  background: var(--warning-light);
+}
+
+.travel-advice-warning {
+  border-left-color: #e65100;
+  background: rgba(234, 88, 12, 0.06);
+}
+
+[data-theme="dark"] .travel-advice-warning {
+  background: rgba(234, 88, 12, 0.08);
+}
+
+.travel-advice-danger {
+  border-left-color: var(--danger);
+  background: var(--danger-light);
+}
+
+.advice-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.advice-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  background: var(--bg-card);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-sm);
+}
+
+.advice-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.advice-verdict {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.advice-subtext {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.advice-region {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+  display: block;
+}
+
+/* Stats grid */
+.advice-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.65rem 0.25rem;
+  background: var(--bg-card);
+  backdrop-filter: blur(8px);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  transition: transform var(--transition-fast);
+}
+
+.stat:hover {
+  transform: translateY(-1px);
+}
+
+.stat-value {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.stat-label {
+  font-size: 0.58rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 600;
+}
+
+/* Tips list */
+.advice-tips {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.advice-tips li {
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  padding: 0.45rem 0.65rem 0.45rem 1.5rem;
+  position: relative;
+  line-height: 1.5;
+  background: var(--bg-card);
+  backdrop-filter: blur(8px);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  transition: transform var(--transition-fast);
+}
+
+.advice-tips li:hover {
+  transform: translateX(2px);
+}
+
+.advice-tips li::before {
+  content: '';
+  position: absolute;
+  left: 0.65rem;
+  top: 0.8rem;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 4px var(--accent-glow);
+}
+
+@media (max-width: 600px) {
+  .advice-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .advice-verdict {
+    font-size: 1rem;
+  }
+
+  .travel-advice {
+    padding: 1rem;
+    border-radius: var(--radius-md);
+  }
+
+  .advice-tips li {
+    font-size: 0.76rem;
+    padding: 0.35rem 0.5rem 0.35rem 1.3rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .travel-advice {
+    padding: 0.85rem;
+  }
+
+  .advice-header {
+    margin-bottom: 0.75rem;
+  }
+
+  .advice-icon-wrap {
+    width: 36px;
+    height: 36px;
+  }
+
+  .advice-verdict {
+    font-size: 0.92rem;
+  }
+
+  .advice-subtext {
+    font-size: 0.72rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .travel-advice {
+    animation: none !important;
+  }
+}

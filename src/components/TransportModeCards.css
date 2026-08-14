@@ -1,0 +1,72 @@
+.transport-modes {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.transport-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border, #e8e8e8);
+  position: relative;
+  overflow: hidden;
+}
+
+.tc-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.tc-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tc-name {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.tc-status {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.tc-tip {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  line-height: 1.3;
+}
+
+.tc-severity-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+
+.severity-bar-good { background: #4caf50; }
+.severity-bar-moderate { background: #ffa726; }
+.severity-bar-poor { background: #f57c00; }
+.severity-bar-severe { background: #e53935; }
+
+/* Severity card borders */
+.transport-card.severity-good { border-left: 3px solid #4caf50; }
+.transport-card.severity-moderate { border-left: 3px solid #ffa726; }
+.transport-card.severity-poor { border-left: 3px solid #f57c00; }
+.transport-card.severity-severe { border-left: 3px solid #e53935; }
+
+@media (max-width: 768px) {
+  .transport-modes {
+    grid-template-columns: 1fr;
+  }
+}

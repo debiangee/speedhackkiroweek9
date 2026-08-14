@@ -1,0 +1,198 @@
+/* ============================================
+   DESIGN SYSTEM — Weather Lang
+   Style: Clean flat cards + crisp typography
+   ============================================ */
+
+/* Light theme */
+:root {
+  --bg-primary: #f8f9fb;
+  --bg-card: #ffffff;
+  --bg-card-solid: #ffffff;
+  --bg-card-hover: #f8fafc;
+  --bg-input: #ffffff;
+  --bg-glass: #ffffff;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
+  --border-color: #e5e7eb;
+  --border-light: #f3f4f6;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-glow: 0 0 0 2px rgba(26, 115, 232, 0.15);
+  --accent: #1a73e8;
+  --accent-light: #eff6ff;
+  --accent-hover: #1557b0;
+  --accent-glow: rgba(26, 115, 232, 0.15);
+  --success: #16a34a;
+  --success-light: #f0fdf4;
+  --warning: #ea580c;
+  --warning-light: #fff7ed;
+  --danger: #dc2626;
+  --danger-light: #fef2f2;
+  --glass-blur: 0px;
+  --glass-border: 1px solid var(--border-color);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --map-water: linear-gradient(180deg, #e3f2fd 0%, #bbdefb 100%);
+  --map-land: #a5d6a7;
+  --map-land-hover: #81c784;
+  --map-land-stroke: #66bb6a;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --transition-fast: 0.15s ease;
+  --transition-medium: 0.25s ease;
+  --transition-slow: 0.4s ease;
+}
+
+/* Dark theme */
+[data-theme="dark"] {
+  --bg-primary: #0f1117;
+  --bg-card: #1a1d27;
+  --bg-card-solid: #1a1d27;
+  --bg-card-hover: #22252f;
+  --bg-input: #1a1d27;
+  --bg-glass: #1a1d27;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --border-color: #2d3139;
+  --border-light: #23262e;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 0 2px rgba(96, 165, 250, 0.2);
+  --accent: #60a5fa;
+  --accent-light: #1e293b;
+  --accent-hover: #93c5fd;
+  --accent-glow: rgba(96, 165, 250, 0.2);
+  --success: #4ade80;
+  --success-light: #14271e;
+  --warning: #fbbf24;
+  --warning-light: #27210f;
+  --danger: #f87171;
+  --danger-light: #2a1515;
+  --glass-blur: 0px;
+  --glass-border: 1px solid var(--border-color);
+  --map-water: linear-gradient(180deg, #1e3a5f 0%, #0f2744 100%);
+  --map-land: #2d6a4f;
+  --map-land-hover: #40916c;
+  --map-land-stroke: #52b788;
+}
+
+/* === RESET === */
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background var(--transition-medium), color var(--transition-medium);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* === TYPOGRAPHY SCALE === */
+
+h1, h2, h3, h4 {
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+/* === INTERACTIVE ELEMENTS === */
+
+button, [role="button"] {
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+/* Prevent zoom on input focus - iOS */
+@media (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* === SMOOTH SCROLL === */
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* === SCROLLBAR — minimal === */
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* === SAFE AREA === */
+
+@supports (padding: env(safe-area-inset-bottom)) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* === FOCUS STATES === */
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* === HIGH CONTRAST === */
+
+@media (prefers-contrast: high) {
+  :root {
+    --text-primary: #000000;
+    --text-secondary: #222222;
+    --border-color: #444444;
+    --bg-card: #ffffff;
+  }
+
+  [data-theme="dark"] {
+    --text-primary: #ffffff;
+    --text-secondary: #dddddd;
+    --border-color: #777777;
+    --bg-card: #1a1a2e;
+  }
+}

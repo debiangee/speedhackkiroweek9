@@ -1,0 +1,121 @@
+/* ============================================
+   ANIMATIONS — PH Rain Forecast
+   Minimal, purposeful motion
+   ============================================ */
+
+/* === ENTRANCE ANIMATIONS === */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* === UTILITY KEYFRAMES === */
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* === STAGGER UTILITY CLASSES === */
+
+.animate-in {
+  animation: fadeInUp 0.3s ease both;
+}
+
+.animate-in-delay-1 { animation: fadeInUp 0.3s ease 0.05s both; }
+.animate-in-delay-2 { animation: fadeInUp 0.3s ease 0.1s both; }
+.animate-in-delay-3 { animation: fadeInUp 0.3s ease 0.15s both; }
+.animate-in-delay-4 { animation: fadeInUp 0.3s ease 0.2s both; }
+.animate-in-delay-5 { animation: fadeInUp 0.3s ease 0.25s both; }
+.animate-in-delay-6 { animation: fadeInUp 0.3s ease 0.3s both; }
+
+.animate-scale {
+  animation: fadeInScale 0.3s ease both;
+}
+
+.animate-slide-right {
+  animation: slideInRight 0.3s ease both;
+}
+
+.animate-slide-left {
+  animation: slideInLeft 0.3s ease both;
+}
+
+/* === RESPECT USER PREFERENCES === */
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-in,
+  .animate-in-delay-1,
+  .animate-in-delay-2,
+  .animate-in-delay-3,
+  .animate-in-delay-4,
+  .animate-in-delay-5,
+  .animate-in-delay-6,
+  .animate-scale,
+  .animate-slide-right,
+  .animate-slide-left {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

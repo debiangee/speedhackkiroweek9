@@ -1,0 +1,100 @@
+/* ============================================
+   BEST TIME TO GO — Time cards
+   ============================================ */
+
+.best-time {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.best-time-card {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem;
+  border-radius: var(--radius-md);
+  border: 1.5px solid;
+  min-width: 0;
+  overflow: hidden;
+  transition: all var(--transition-fast);
+  animation: fadeInScale 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.best-time-card:nth-child(1) { animation-delay: 0.05s; }
+.best-time-card:nth-child(2) { animation-delay: 0.12s; }
+
+.best-time-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.best-time-card.good {
+  background: var(--success-light);
+  border-color: var(--success);
+}
+
+.best-time-card.bad {
+  background: var(--danger-light);
+  border-color: var(--danger);
+}
+
+.btc-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+}
+
+.btc-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
+  min-width: 0;
+}
+
+.btc-label {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 600;
+}
+
+.btc-time {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
+}
+
+.btc-prob {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 600px) {
+  .best-time {
+    grid-template-columns: 1fr;
+  }
+
+  .best-time-card {
+    padding: 0.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .best-time-card {
+    animation: none !important;
+  }
+}

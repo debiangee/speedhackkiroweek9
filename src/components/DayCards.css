@@ -1,0 +1,133 @@
+/* ============================================
+   DAY CARDS — Cards with entrance animation
+   ============================================ */
+
+.day-cards {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 0.3rem 0;
+  -webkit-overflow-scrolling: touch;
+  min-width: 0;
+  max-width: 100%;
+  scroll-snap-type: x mandatory;
+}
+
+.day-cards::-webkit-scrollbar {
+  height: 3px;
+}
+
+.day-cards::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 4px;
+}
+
+.day-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 100px;
+  max-width: 110px;
+  flex-shrink: 0;
+  padding: 0.75rem 0.5rem;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  scroll-snap-align: start;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+  animation: fadeInUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Stagger day card entrance */
+.day-card:nth-child(1) { animation-delay: 0.02s; }
+.day-card:nth-child(2) { animation-delay: 0.06s; }
+.day-card:nth-child(3) { animation-delay: 0.10s; }
+.day-card:nth-child(4) { animation-delay: 0.14s; }
+.day-card:nth-child(5) { animation-delay: 0.18s; }
+.day-card:nth-child(6) { animation-delay: 0.22s; }
+.day-card:nth-child(7) { animation-delay: 0.26s; }
+
+.day-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-3px);
+}
+
+.day-card:active {
+  transform: scale(0.97) translateY(0);
+}
+
+.day-card.selected {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  box-shadow: var(--shadow-glow);
+}
+
+.day-card-header {
+  display: flex;
+  flex-direction: column;
+}
+
+.day-name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.day-date {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+}
+
+.day-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+}
+
+.day-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+}
+
+.day-verdict {
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.day-prob {
+  font-size: 0.62rem;
+  color: var(--text-secondary);
+}
+
+.day-temp {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+@media (max-width: 600px) {
+  .day-card {
+    min-width: 88px;
+    max-width: 95px;
+    padding: 0.6rem 0.4rem;
+    border-radius: var(--radius-sm);
+  }
+
+  .day-icon {
+    height: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .day-card {
+    animation: none !important;
+  }
+}

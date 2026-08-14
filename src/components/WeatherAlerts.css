@@ -1,0 +1,105 @@
+.weather-alerts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.alert-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  position: relative;
+  animation: alertSlideIn 0.3s ease-out;
+}
+
+@keyframes alertSlideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.alert-info {
+  background: var(--info-light, #e3f2fd);
+  border: 1.5px solid var(--info, #1a73e8);
+}
+
+.alert-warning {
+  background: var(--warning-light);
+  border: 1.5px solid var(--warning);
+}
+
+.alert-danger {
+  background: #fef2f2;
+  border: 1.5px solid #dc2626;
+}
+
+[data-theme="dark"] .alert-danger {
+  background: rgba(220, 38, 38, 0.1);
+  border-color: #ef4444;
+}
+
+[data-theme="dark"] .alert-info {
+  background: rgba(26, 115, 232, 0.1);
+  border-color: #60a5fa;
+}
+
+.alert-icon {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.alert-body {
+  flex: 1;
+  padding-right: 1.5rem;
+}
+
+.alert-title {
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  display: block;
+  margin-bottom: 0.15rem;
+}
+
+.alert-message {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.alert-dismiss {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.2s;
+  color: var(--text-muted);
+}
+
+.alert-dismiss:hover {
+  background: var(--bg-card-hover);
+}
+
+@media (max-width: 600px) {
+  .alert-card {
+    padding: 0.6rem 0.75rem;
+  }
+
+  .alert-title {
+    font-size: 0.78rem;
+  }
+
+  .alert-message {
+    font-size: 0.68rem;
+  }
+}

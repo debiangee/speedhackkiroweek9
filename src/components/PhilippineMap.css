@@ -1,0 +1,235 @@
+/* ============================================
+   PHILIPPINE MAP — Container + animated pins
+   ============================================ */
+
+.ph-map-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  padding: 1.5rem;
+  text-align: center;
+  animation: fadeInScale 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+}
+
+.map-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  letter-spacing: -0.02em;
+}
+
+.map-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+}
+
+.map-loading {
+  padding: 4rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  animation: pulse-soft 1.5s ease-in-out infinite;
+}
+
+.map-wrapper {
+  width: 100%;
+  margin: 0 auto;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  background: var(--map-water);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.ph-map-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Region shapes */
+.region-path {
+  fill: var(--map-land);
+  stroke: var(--map-land-stroke);
+  stroke-width: 0.8;
+  stroke-linejoin: round;
+  cursor: pointer;
+  transition: fill var(--transition-fast), stroke var(--transition-fast), filter var(--transition-fast);
+  outline: none;
+}
+
+.region-path:hover,
+.region-path.hovered {
+  fill: var(--map-land-hover);
+  stroke: #388e3c;
+  stroke-width: 1.2;
+  filter: brightness(1.05);
+}
+
+.region-path.selected {
+  fill: #64b5f6;
+  stroke: #1565c0;
+  stroke-width: 1.5;
+  filter: drop-shadow(0 2px 6px rgba(21, 101, 192, 0.35));
+}
+
+.region-path:focus-visible {
+  fill: #ffb74d;
+  stroke: #e65100;
+  stroke-width: 1.5;
+}
+
+/* Region pins */
+.pin-dot {
+  fill: #d32f2f;
+  stroke: white;
+  stroke-width: 2;
+  transition: all var(--transition-fast);
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.4));
+}
+
+.region-pin.selected .pin-dot {
+  fill: var(--accent);
+  stroke: white;
+  stroke-width: 2.5;
+  filter: drop-shadow(0 2px 8px var(--accent-glow));
+}
+
+.region-pin:hover .pin-dot {
+  fill: #ff6f00;
+  transform: scale(1.1);
+}
+
+.pin-pulse {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  opacity: 0.6;
+  animation: mapPulse 1.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+@keyframes mapPulse {
+  0% { r: 10; opacity: 0.7; }
+  100% { r: 26; opacity: 0; }
+}
+
+.pin-label-group {
+  pointer-events: none;
+}
+
+.pin-label-bg {
+  fill: #1f2937;
+  opacity: 0.92;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
+}
+
+.pin-label-text {
+  fill: white;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+}
+
+/* Selected region badge */
+.selected-region-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 1rem;
+  padding: 0.6rem 1.3rem;
+  background: var(--accent-light);
+  border-radius: 24px;
+  border: 1.5px solid var(--accent);
+  box-shadow: 0 2px 8px var(--accent-glow);
+  transition: all var(--transition-fast);
+  animation: fadeInUp 0.3s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
+}
+
+.badge-text-wrap {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  line-height: 1.2;
+}
+
+.selected-region-badge strong {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.88rem;
+  letter-spacing: -0.01em;
+}
+
+.badge-subtext {
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+}
+
+/* MOBILE */
+@media (max-width: 900px) {
+  .ph-map-container {
+    padding: 1rem;
+  }
+
+  .map-wrapper {
+    max-width: 420px;
+  }
+
+  .map-title {
+    font-size: 1.05rem;
+  }
+
+  .map-subtitle {
+    font-size: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .ph-map-container {
+    padding: 0.85rem;
+    border-radius: var(--radius-lg);
+  }
+
+  .map-wrapper {
+    max-width: 100%;
+    border-radius: var(--radius-sm);
+  }
+
+  .selected-region-badge {
+    font-size: 0.85rem;
+    padding: 0.45rem 1rem;
+    margin-top: 0.75rem;
+  }
+
+  .pin-label-text {
+    font-size: 12px;
+  }
+
+  .pin-dot {
+    stroke-width: 2.5;
+  }
+}
+
+@media (max-width: 400px) {
+  .ph-map-container {
+    padding: 0.7rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ph-map-container,
+  .selected-region-badge {
+    animation: none !important;
+  }
+
+  .pin-pulse {
+    animation: none;
+    display: none;
+  }
+}

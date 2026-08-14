@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "Validate Optimization Logic",
+  "description": "After writing to optimization or weather-related files, verify the agentic loop logic remains consistent: OBSERVE → REASON → RECOMMEND → RE-EVALUATE. Check that scoring weights sum correctly and that reasoning steps match the actual computation.",
+  "version": "1",
+  "when": {
+    "type": "postToolUse",
+    "toolTypes": [
+      "write"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "If the file just written is optimization-engine.ts or OptimizationPanel.tsx, verify: 1) scoring weights per goal sum to 1.0, 2) reasoning steps cover all scored signals, 3) confidence calculation is consistent with individual hour scores. If the file is unrelated, skip validation."
+  }
+}
