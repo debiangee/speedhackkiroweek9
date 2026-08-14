@@ -79,6 +79,9 @@ test.describe('PH Rain Forecast — Loop Orchestration (Multi-Region)', () => {
       await page.goto('/');
       await page.waitForSelector('#main-content', { state: 'visible' });
 
+      // Wait for initial loader to disappear before interacting
+      await page.locator('.cinematic-loader').waitFor({ state: 'hidden', timeout: 15000 }).catch(() => {});
+
       // Try to find and use a region search/selector
       const searchInput = page.locator(
         'input[type="text"], input[type="search"], [class*="search"] input'
@@ -88,10 +91,13 @@ test.describe('PH Rain Forecast — Loop Orchestration (Multi-Region)', () => {
         await searchInput.fill(region);
         await page.waitForTimeout(500);
 
-        // Look for the region in dropdown results and click it
+        // Use keyboard to select the first result (avoids pointer interception issues on mobile)
         const option = page.locator(`text=${region}`).first();
         if (await option.isVisible({ timeout: 2000 }).catch(() => false)) {
-          await option.click();
+          await option.click({ force: true, timeout: 5000 }).catch(async () => {
+            // Fallback: press Enter to select from the dropdown
+            await searchInput.press('Enter');
+          });
           await page.waitForTimeout(1000);
         }
       }

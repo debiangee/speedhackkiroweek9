@@ -95,6 +95,8 @@
   align-items: center;
   gap: 0.6rem;
   margin-bottom: 1rem;
+  position: relative;
+  z-index: 10;
   animation: fadeInUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.05s both;
 }
 

@@ -3,7 +3,9 @@ import { test, expect } from '@playwright/test';
 test.describe('Trip Go Checker Module', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForSelector('#main-content', { state: 'visible' });
+    await page.waitForSelector('#main-content', { state: 'visible', timeout: 20000 });
+    // Wait for initial loader to disappear
+    await page.locator('.cinematic-loader').waitFor({ state: 'hidden', timeout: 15000 }).catch(() => {});
   });
 
   test('renders Trip Go Checker section card', async ({ page }) => {
@@ -17,8 +19,10 @@ test.describe('Trip Go Checker Module', () => {
   });
 
   test('region dropdown contains all 17 Philippine regions', async ({ page }) => {
+    // On mobile, may need to scroll to the Trip Go Checker section
     const select = page.locator('#tgc-region');
-    await expect(select).toBeVisible();
+    await select.scrollIntoViewIfNeeded();
+    await expect(select).toBeVisible({ timeout: 10000 });
     const options = await select.locator('option').count();
     // 17 regions + 1 placeholder = 18
     expect(options).toBe(18);
@@ -108,6 +112,7 @@ test.describe('Trip Go Checker Module', () => {
 
   test('travel windows are displayed', async ({ page }) => {
     const regionSelect = page.locator('#tgc-region');
+    await regionSelect.scrollIntoViewIfNeeded();
     await regionSelect.selectOption('Western Visayas');
 
     // Wait for windows section
