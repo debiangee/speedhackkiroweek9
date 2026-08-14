@@ -15,9 +15,9 @@ interface RainViewerData {
 }
 
 // Philippines center
-const PH_LAT = 12.5;
-const PH_LON = 121.5;
-const ZOOM = 5;
+const PH_LAT = 12.0;
+const PH_LON = 122.0;
+const ZOOM = 4;
 const SIZE = 512;
 const COLOR_SCHEME = 2; // Universal Blue color scheme
 const OPTIONS = '1_1'; // smooth=1, snow=1
@@ -29,6 +29,7 @@ export function WeatherRiskMap() {
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pastCount, setPastCount] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Fetch RainViewer radar data
@@ -47,6 +48,7 @@ export function WeatherRiskMap() {
 
         setHost(data.host);
         setFrames(allFrames);
+        setPastCount(data.radar.past.length);
         // Start at the last past frame (most recent actual data)
         const pastLen = data.radar.past.length;
         setCurrentFrame(Math.max(0, pastLen - 1));
@@ -95,10 +97,6 @@ export function WeatherRiskMap() {
     return 'forecast';
   }
 
-  const pastCount = frames.length > 0
-    ? frames.filter((_, i) => i < frames.length - (frames.length > 12 ? frames.length - 12 : 0)).length
-    : 0;
-
   // Build tile URL for coordinate-based rendering
   function getRadarTileUrl(frame: RadarFrame): string {
     return `${host}${frame.path}/${SIZE}/${ZOOM}/${PH_LAT}/${PH_LON}/${COLOR_SCHEME}/${OPTIONS}.png`;
@@ -121,14 +119,6 @@ export function WeatherRiskMap() {
 
       {/* Radar image display */}
       <div className="risk-map-viewport">
-        {/* Base map (static) */}
-        <img
-          className="risk-map-basemap"
-          src={`https://tile.openstreetmap.org/${ZOOM}/${Math.floor((PH_LON + 180) / 360 * (1 << ZOOM))}/${Math.floor((1 - Math.log(Math.tan(PH_LAT * Math.PI / 180) + 1 / Math.cos(PH_LAT * Math.PI / 180)) / Math.PI) / 2 * (1 << ZOOM))}.png`}
-          alt=""
-          aria-hidden="true"
-          draggable={false}
-        />
         {/* Use the RainViewer coordinate-based tile as radar overlay */}
         {frames.length > 0 && host && frames[currentFrame] && (
           <img
@@ -138,8 +128,8 @@ export function WeatherRiskMap() {
             draggable={false}
           />
         )}
-        {/* Philippines outline overlay label */}
-        <div className="risk-map-region-label">Philippines</div>
+        {/* Philippines label */}
+        <div className="risk-map-region-label">🇵🇭 Philippines Radar</div>
       </div>
 
       {/* Controls */}
@@ -200,8 +190,6 @@ export function WeatherRiskMap() {
 
       <p className="risk-map-attribution">
         Live radar from <a href="https://www.rainviewer.com/" target="_blank" rel="noopener noreferrer">RainViewer</a>
-        {' · '}Map ©{' '}
-        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>
       </p>
     </div>
   );

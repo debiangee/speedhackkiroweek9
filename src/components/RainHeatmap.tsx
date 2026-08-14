@@ -39,10 +39,10 @@ function getRainColor(rainMm: number): string {
   return '#c0392b';                      // Extreme - red
 }
 
-// Simple projection
-const MAP_BOUNDS = { minLon: 117, maxLon: 127, minLat: 5, maxLat: 20 };
-const SVG_W = 200;
-const SVG_H = 300;
+// Simple projection — expanded for better bubble spacing
+const MAP_BOUNDS = { minLon: 116, maxLon: 128, minLat: 4.5, maxLat: 21 };
+const SVG_W = 240;
+const SVG_H = 360;
 
 function px(lon: number) { return ((lon - MAP_BOUNDS.minLon) / (MAP_BOUNDS.maxLon - MAP_BOUNDS.minLon)) * SVG_W; }
 function py(lat: number) { return ((MAP_BOUNDS.maxLat - lat) / (MAP_BOUNDS.maxLat - MAP_BOUNDS.minLat)) * SVG_H; }
@@ -114,13 +114,13 @@ export function RainHeatmap() {
     <div className="rain-heatmap">
       <div className="heatmap-map">
         <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} className="heatmap-svg">
-          <rect width={SVG_W} height={SVG_H} fill="var(--bg-card)" rx="8" />
+          <rect width={SVG_W} height={SVG_H} fill="transparent" rx="8" />
           {data.map((d) => {
             const coords = REGION_COORDS[d.region];
             if (!coords) return null;
             const x = px(coords.lon);
             const y = py(coords.lat);
-            const radius = 8 + (d.rainMm / maxRain) * 14;
+            const radius = 6 + (d.rainMm / maxRain) * 10;
             return (
               <g key={d.region}>
                 <circle
