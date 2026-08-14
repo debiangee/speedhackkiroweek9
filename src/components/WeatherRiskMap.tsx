@@ -98,8 +98,11 @@ export function WeatherRiskMap() {
   }
 
   // Build tile URL for coordinate-based rendering
+  // RainViewer requires lat/lon to contain a dot (decimal format)
   function getRadarTileUrl(frame: RadarFrame): string {
-    return `${host}${frame.path}/${SIZE}/${ZOOM}/${PH_LAT}/${PH_LON}/${COLOR_SCHEME}/${OPTIONS}.png`;
+    const lat = PH_LAT.toFixed(4);
+    const lon = PH_LON.toFixed(4);
+    return `${host}${frame.path}/${SIZE}/${ZOOM}/${lat}/${lon}/${COLOR_SCHEME}/${OPTIONS}.png`;
   }
 
   return (
@@ -126,7 +129,23 @@ export function WeatherRiskMap() {
             src={getRadarTileUrl(frames[currentFrame])}
             alt={`Rain radar at ${getFrameLabel(frames[currentFrame])}`}
             draggable={false}
+            onError={(e) => {
+              // If coordinate tile fails, try without the decimal issue
+              const img = e.currentTarget;
+              if (!img.dataset.retried) {
+                img.dataset.retried = 'true';
+                const frame = frames[currentFrame];
+                // Fallback: use slightly different coordinates
+                img.src = `${host}${frame.path}/${SIZE}/${ZOOM}/12.8797/121.7740/${COLOR_SCHEME}/${OPTIONS}.png`;
+              }
+            }}
           />
+        )}
+        {/* No rain indicator when image loads but shows nothing */}
+        {frames.length > 0 && !loading && !error && (
+          <div className="risk-map-no-rain-hint">
+            Dark areas = no precipitation detected
+          </div>
         )}
         {/* Philippines label */}
         <div className="risk-map-region-label">🇵🇭 Philippines Radar</div>

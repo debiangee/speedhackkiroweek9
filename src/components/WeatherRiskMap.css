@@ -42,6 +42,19 @@
   pointer-events: none;
 }
 
+.risk-map-no-rain-hint {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(0, 0, 0, 0.3);
+  padding: 3px 8px;
+  border-radius: 4px;
+  z-index: 3;
+  pointer-events: none;
+}
+
 /* === Loading === */
 .risk-map-loading {
   position: absolute;

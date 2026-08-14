@@ -2,25 +2,25 @@ import { useState, useEffect } from 'react';
 import { DropletIcon } from './Icons';
 import './RainHeatmap.css';
 
-// Region center coordinates (same as useWeatherData)
+// Region center coordinates — slightly adjusted to reduce bubble overlap on the map
 const REGION_COORDS: Record<string, { lat: number; lon: number }> = {
-  'NCR': { lat: 14.5995, lon: 120.9842 },
-  'CAR': { lat: 16.4023, lon: 120.596 },
-  'Ilocos': { lat: 17.5747, lon: 120.3869 },
-  'Cagayan Valley': { lat: 17.6132, lon: 121.727 },
-  'Central Luzon': { lat: 15.145, lon: 120.5887 },
-  'CALABARZON': { lat: 14.1, lon: 121.3 },
-  'MIMAROPA': { lat: 9.7392, lon: 118.7353 },
-  'Bicol': { lat: 13.1391, lon: 123.7438 },
-  'Western Visayas': { lat: 10.7202, lon: 122.5621 },
-  'Central Visayas': { lat: 10.3157, lon: 123.8854 },
-  'Eastern Visayas': { lat: 11.25, lon: 125.0 },
-  'Zamboanga Peninsula': { lat: 6.9214, lon: 122.079 },
-  'Northern Mindanao': { lat: 8.4542, lon: 124.6319 },
-  'Davao': { lat: 7.1907, lon: 125.4553 },
-  'SOCCSKSARGEN': { lat: 6.5, lon: 124.85 },
-  'Caraga': { lat: 8.9475, lon: 125.5406 },
-  'BARMM': { lat: 7.2, lon: 124.23 },
+  'NCR': { lat: 14.5995, lon: 121.0 },
+  'CAR': { lat: 16.8, lon: 120.5 },
+  'Ilocos': { lat: 17.8, lon: 119.8 },
+  'Cagayan Valley': { lat: 17.8, lon: 121.7 },
+  'Central Luzon': { lat: 15.5, lon: 120.3 },
+  'CALABARZON': { lat: 14.0, lon: 121.6 },
+  'MIMAROPA': { lat: 12.0, lon: 118.7 },
+  'Bicol': { lat: 13.2, lon: 123.7 },
+  'Western Visayas': { lat: 10.7, lon: 122.2 },
+  'Central Visayas': { lat: 10.0, lon: 123.9 },
+  'Eastern Visayas': { lat: 11.25, lon: 125.2 },
+  'Zamboanga Peninsula': { lat: 7.5, lon: 121.5 },
+  'Northern Mindanao': { lat: 8.5, lon: 124.2 },
+  'Davao': { lat: 7.0, lon: 125.8 },
+  'SOCCSKSARGEN': { lat: 6.2, lon: 124.5 },
+  'Caraga': { lat: 9.2, lon: 125.8 },
+  'BARMM': { lat: 7.0, lon: 123.0 },
 };
 
 interface RegionRain {
@@ -39,13 +39,13 @@ function getRainColor(rainMm: number): string {
   return '#c0392b';                      // Extreme - red
 }
 
-// Simple projection — expanded for better bubble spacing
-const MAP_BOUNDS = { minLon: 116, maxLon: 128, minLat: 4.5, maxLat: 21 };
-const SVG_W = 240;
-const SVG_H = 360;
+// Simple projection — adjusted for proper PH map proportions
+const MAP_BOUNDS = { minLon: 117, maxLon: 127, minLat: 5, maxLat: 20 };
+const SVG_W = 280;
+const SVG_H = 400;
 
-function px(lon: number) { return ((lon - MAP_BOUNDS.minLon) / (MAP_BOUNDS.maxLon - MAP_BOUNDS.minLon)) * SVG_W; }
-function py(lat: number) { return ((MAP_BOUNDS.maxLat - lat) / (MAP_BOUNDS.maxLat - MAP_BOUNDS.minLat)) * SVG_H; }
+function px(lon: number) { return 20 + ((lon - MAP_BOUNDS.minLon) / (MAP_BOUNDS.maxLon - MAP_BOUNDS.minLon)) * (SVG_W - 40); }
+function py(lat: number) { return 20 + ((MAP_BOUNDS.maxLat - lat) / (MAP_BOUNDS.maxLat - MAP_BOUNDS.minLat)) * (SVG_H - 40); }
 
 export function RainHeatmap() {
   const [data, setData] = useState<RegionRain[]>([]);
@@ -120,7 +120,7 @@ export function RainHeatmap() {
             if (!coords) return null;
             const x = px(coords.lon);
             const y = py(coords.lat);
-            const radius = 6 + (d.rainMm / maxRain) * 10;
+            const radius = 8 + (d.rainMm / maxRain) * 8;
             return (
               <g key={d.region}>
                 <circle
