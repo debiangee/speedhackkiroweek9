@@ -130,12 +130,16 @@ export function useWeatherSignals(
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Stabilize coords to primitives to avoid referential loops (same pattern as useWeatherData)
+  const coordsLat = cityCoords?.lat ?? REGION_COORDS[region]?.lat ?? null;
+  const coordsLon = cityCoords?.lon ?? REGION_COORDS[region]?.lon ?? null;
+
   const fetchSignals = useCallback(async () => {
-    const coords = cityCoords || REGION_COORDS[region];
-    if (!coords) {
+    if (coordsLat === null || coordsLon === null) {
       setState({ loading: false, error: 'Unknown region', signal: null });
       return;
     }
+    const coords = { lat: coordsLat, lon: coordsLon };
 
     // Check cache first (30 min TTL via useWeatherCache)
     const cacheKey = `signals-${coords.lat}-${coords.lon}`;
@@ -203,7 +207,7 @@ export function useWeatherSignals(
         signal: null,
       });
     }
-  }, [region, cityCoords]);
+  }, [region, coordsLat, coordsLon]);
 
   useEffect(() => {
     if (debounceRef.current) {

@@ -1,26 +1,47 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { DropletIcon } from './Icons';
 import './RainHeatmap.css';
 
-// Region center coordinates — slightly adjusted to reduce bubble overlap on the map
+// Region center coordinates for API calls
 const REGION_COORDS: Record<string, { lat: number; lon: number }> = {
-  'NCR': { lat: 14.5995, lon: 121.0 },
-  'CAR': { lat: 16.8, lon: 120.5 },
-  'Ilocos': { lat: 17.8, lon: 119.8 },
-  'Cagayan Valley': { lat: 17.8, lon: 121.7 },
-  'Central Luzon': { lat: 15.5, lon: 120.3 },
-  'CALABARZON': { lat: 14.0, lon: 121.6 },
-  'MIMAROPA': { lat: 12.0, lon: 118.7 },
-  'Bicol': { lat: 13.2, lon: 123.7 },
-  'Western Visayas': { lat: 10.7, lon: 122.2 },
-  'Central Visayas': { lat: 10.0, lon: 123.9 },
-  'Eastern Visayas': { lat: 11.25, lon: 125.2 },
-  'Zamboanga Peninsula': { lat: 7.5, lon: 121.5 },
-  'Northern Mindanao': { lat: 8.5, lon: 124.2 },
-  'Davao': { lat: 7.0, lon: 125.8 },
-  'SOCCSKSARGEN': { lat: 6.2, lon: 124.5 },
-  'Caraga': { lat: 9.2, lon: 125.8 },
-  'BARMM': { lat: 7.0, lon: 123.0 },
+  'NCR': { lat: 14.5995, lon: 120.9842 },
+  'CAR': { lat: 16.4023, lon: 120.596 },
+  'Ilocos': { lat: 17.5747, lon: 120.3869 },
+  'Cagayan Valley': { lat: 17.6132, lon: 121.727 },
+  'Central Luzon': { lat: 15.145, lon: 120.5887 },
+  'CALABARZON': { lat: 14.1, lon: 121.3 },
+  'MIMAROPA': { lat: 9.7392, lon: 118.7353 },
+  'Bicol': { lat: 13.1391, lon: 123.7438 },
+  'Western Visayas': { lat: 10.7202, lon: 122.5621 },
+  'Central Visayas': { lat: 10.3157, lon: 123.8854 },
+  'Eastern Visayas': { lat: 11.25, lon: 125.0 },
+  'Zamboanga Peninsula': { lat: 6.9214, lon: 122.079 },
+  'Northern Mindanao': { lat: 8.4542, lon: 124.6319 },
+  'Davao': { lat: 7.1907, lon: 125.4553 },
+  'SOCCSKSARGEN': { lat: 6.5, lon: 124.85 },
+  'Caraga': { lat: 8.9475, lon: 125.5406 },
+  'BARMM': { lat: 7.2, lon: 124.23 },
+};
+
+// Map region names from GeoJSON to our data keys
+const REGION_NAME_MAP: Record<string, string> = {
+  'Cordillera Administrative Region (CAR)': 'CAR',
+  'National Capital Region (NCR)': 'NCR',
+  'Ilocos Region (Region I)': 'Ilocos',
+  'Cagayan Valley (Region II)': 'Cagayan Valley',
+  'Central Luzon (Region III)': 'Central Luzon',
+  'CALABARZON (Region IV-A)': 'CALABARZON',
+  'MIMAROPA (Region IV-B)': 'MIMAROPA',
+  'Bicol Region (Region V)': 'Bicol',
+  'Western Visayas (Region VI)': 'Western Visayas',
+  'Central Visayas (Region VII)': 'Central Visayas',
+  'Eastern Visayas (Region VIII)': 'Eastern Visayas',
+  'Zamboanga Peninsula (Region IX)': 'Zamboanga Peninsula',
+  'Northern Mindanao (Region X)': 'Northern Mindanao',
+  'Davao Region (Region XI)': 'Davao',
+  'SOCCSKSARGEN (Region XII)': 'SOCCSKSARGEN',
+  'Caraga (Region XIII)': 'Caraga',
+  'Autonomous Region of Muslim Mindanao (ARMM)': 'BARMM',
 };
 
 interface RegionRain {
@@ -29,39 +50,87 @@ interface RegionRain {
   probability: number;
 }
 
-// Color based on rain intensity
-function getRainColor(rainMm: number): string {
-  if (rainMm <= 1) return '#a8e6cf';    // Dry - green
-  if (rainMm <= 5) return '#88d8b0';    // Light
-  if (rainMm <= 10) return '#ffd93d';   // Moderate - yellow
-  if (rainMm <= 20) return '#ff9f43';   // Heavy - orange
-  if (rainMm <= 40) return '#ee5a24';   // Very heavy - red-orange
-  return '#c0392b';                      // Extreme - red
+interface GeoFeature {
+  type: string;
+  geometry: {
+    type: string;
+    coordinates: number[][][][] | number[][][];
+  };
+  properties: { REGION: string };
 }
 
-// Simple projection — adjusted for proper PH map proportions
-const MAP_BOUNDS = { minLon: 117, maxLon: 127, minLat: 5, maxLat: 20 };
-const SVG_W = 280;
-const SVG_H = 400;
+// Color based on rain intensity
+function getRainColor(rainMm: number): string {
+  if (rainMm <= 1) return '#a8e6cf';
+  if (rainMm <= 5) return '#88d8b0';
+  if (rainMm <= 10) return '#ffd93d';
+  if (rainMm <= 20) return '#ff9f43';
+  if (rainMm <= 40) return '#ee5a24';
+  return '#c0392b';
+}
 
-function px(lon: number) { return 20 + ((lon - MAP_BOUNDS.minLon) / (MAP_BOUNDS.maxLon - MAP_BOUNDS.minLon)) * (SVG_W - 40); }
-function py(lat: number) { return 20 + ((MAP_BOUNDS.maxLat - lat) / (MAP_BOUNDS.maxLat - MAP_BOUNDS.minLat)) * (SVG_H - 40); }
+function getRainFill(rainMm: number): string {
+  if (rainMm <= 1) return 'rgba(168, 230, 207, 0.4)';
+  if (rainMm <= 5) return 'rgba(136, 216, 176, 0.5)';
+  if (rainMm <= 10) return 'rgba(255, 217, 61, 0.5)';
+  if (rainMm <= 20) return 'rgba(255, 159, 67, 0.55)';
+  if (rainMm <= 40) return 'rgba(238, 90, 36, 0.6)';
+  return 'rgba(192, 57, 43, 0.65)';
+}
+
+// Projection: convert lat/lon to SVG coordinates
+const BOUNDS = { minLon: 116.5, maxLon: 127.5, minLat: 4.5, maxLat: 21 };
+const SVG_W = 280;
+const SVG_H = 420;
+
+function projectX(lon: number): number {
+  return ((lon - BOUNDS.minLon) / (BOUNDS.maxLon - BOUNDS.minLon)) * SVG_W;
+}
+function projectY(lat: number): number {
+  return ((BOUNDS.maxLat - lat) / (BOUNDS.maxLat - BOUNDS.minLat)) * SVG_H;
+}
+
+// Convert a polygon ring to SVG path
+function ringToPath(ring: number[][]): string {
+  return ring.map((pt, i) => `${i === 0 ? 'M' : 'L'}${projectX(pt[0]).toFixed(1)},${projectY(pt[1]).toFixed(1)}`).join(' ') + ' Z';
+}
+
+// Convert geometry to SVG path data
+function geometryToPath(geometry: GeoFeature['geometry']): string {
+  if (geometry.type === 'Polygon') {
+    const coords = geometry.coordinates as number[][][];
+    return coords.map(ringToPath).join(' ');
+  }
+  if (geometry.type === 'MultiPolygon') {
+    const coords = geometry.coordinates as number[][][][];
+    return coords.map(poly => poly.map(ringToPath).join(' ')).join(' ');
+  }
+  return '';
+}
 
 export function RainHeatmap() {
   const [data, setData] = useState<RegionRain[]>([]);
   const [loading, setLoading] = useState(true);
+  const [geoData, setGeoData] = useState<GeoFeature[]>([]);
+  const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
 
+  // Load GeoJSON
+  useEffect(() => {
+    fetch('/data/ph-regions.json')
+      .then(res => res.json())
+      .then(json => setGeoData(json.features || []))
+      .catch(() => setGeoData([]));
+  }, []);
+
+  // Fetch rain data
   useEffect(() => {
     let cancelled = false;
 
     async function fetchAllRegions() {
       setLoading(true);
-
-      // Fetch today's rain for all regions in parallel (batched)
       const entries = Object.entries(REGION_COORDS);
       const results: RegionRain[] = [];
 
-      // Batch in groups of 4 to avoid rate limits
       for (let i = 0; i < entries.length; i += 4) {
         const batch = entries.slice(i, i + 4);
         const promises = batch.map(async ([region, coords]) => {
@@ -81,9 +150,8 @@ export function RainHeatmap() {
         const batchResults = await Promise.all(promises);
         results.push(...batchResults);
 
-        // Small delay between batches
         if (i + 4 < entries.length) {
-          await new Promise((r) => setTimeout(r, 500));
+          await new Promise((r) => setTimeout(r, 300));
         }
       }
 
@@ -97,6 +165,13 @@ export function RainHeatmap() {
     return () => { cancelled = true; };
   }, []);
 
+  // Map region rain data by name for quick lookup
+  const rainByRegion = useMemo(() => {
+    const map = new Map<string, RegionRain>();
+    data.forEach(d => map.set(d.region, d));
+    return map;
+  }, [data]);
+
   if (loading) {
     return (
       <div className="rain-heatmap">
@@ -108,46 +183,66 @@ export function RainHeatmap() {
     );
   }
 
-  const maxRain = Math.max(...data.map((d) => d.rainMm), 1);
+  const hoveredData = hoveredRegion ? rainByRegion.get(hoveredRegion) : null;
 
   return (
     <div className="rain-heatmap">
+      {/* GeoJSON Map */}
       <div className="heatmap-map">
         <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} className="heatmap-svg">
-          <rect width={SVG_W} height={SVG_H} fill="transparent" rx="8" />
+          {/* Background */}
+          <rect width={SVG_W} height={SVG_H} fill="transparent" />
+
+          {/* Region shapes */}
+          {geoData.map((feature) => {
+            const geoName = feature.properties.REGION;
+            const regionKey = REGION_NAME_MAP[geoName] || geoName;
+            const regionRain = rainByRegion.get(regionKey);
+            const rainMm = regionRain?.rainMm ?? 0;
+            const pathData = geometryToPath(feature.geometry);
+            const isHovered = hoveredRegion === regionKey;
+
+            return (
+              <path
+                key={geoName}
+                d={pathData}
+                fill={getRainFill(rainMm)}
+                stroke={isHovered ? getRainColor(rainMm) : 'rgba(255,255,255,0.25)'}
+                strokeWidth={isHovered ? 1.5 : 0.5}
+                className="heatmap-region-path"
+                onMouseEnter={() => setHoveredRegion(regionKey)}
+                onMouseLeave={() => setHoveredRegion(null)}
+              />
+            );
+          })}
+
+          {/* Rain amount labels */}
           {data.map((d) => {
             const coords = REGION_COORDS[d.region];
-            if (!coords) return null;
-            const x = px(coords.lon);
-            const y = py(coords.lat);
-            const radius = 8 + (d.rainMm / maxRain) * 8;
+            if (!coords || d.rainMm === 0) return null;
+            const x = projectX(coords.lon);
+            const y = projectY(coords.lat);
             return (
-              <g key={d.region}>
-                <circle
-                  cx={x}
-                  cy={y}
-                  r={radius}
-                  fill={getRainColor(d.rainMm)}
-                  opacity={0.7}
-                  stroke={getRainColor(d.rainMm)}
-                  strokeWidth={1}
-                />
-                <text
-                  x={x}
-                  y={y + 3}
-                  textAnchor="middle"
-                  fontSize="7"
-                  fill="var(--text-primary)"
-                  fontWeight="600"
-                >
-                  {d.rainMm > 0 ? d.rainMm.toFixed(0) : '0'}
+              <g key={d.region + '-label'}>
+                <circle cx={x} cy={y} r={10} fill={getRainColor(d.rainMm)} opacity={0.85} />
+                <text x={x} y={y + 3} textAnchor="middle" fontSize="6.5" fill="#fff" fontWeight="700">
+                  {d.rainMm.toFixed(0)}
                 </text>
               </g>
             );
           })}
         </svg>
+
+        {/* Hover tooltip */}
+        {hoveredData && (
+          <div className="heatmap-tooltip">
+            <strong>{hoveredData.region}</strong>
+            <span>{hoveredData.rainMm}mm · {hoveredData.probability}% chance</span>
+          </div>
+        )}
       </div>
 
+      {/* Legend */}
       <div className="heatmap-legend">
         <span className="legend-title">Rain (mm today)</span>
         <div className="legend-scale">
@@ -159,6 +254,7 @@ export function RainHeatmap() {
         </div>
       </div>
 
+      {/* Top regions list */}
       <div className="heatmap-list">
         {[...data].sort((a, b) => b.rainMm - a.rainMm).slice(0, 5).map((d) => (
           <div key={d.region} className="heatmap-row">

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import './WeatherRiskMap.css';
 
 interface RadarFrame {
@@ -14,13 +14,23 @@ interface RainViewerData {
   };
 }
 
-// Philippines center
-const PH_LAT = 12.0;
-const PH_LON = 122.0;
-const ZOOM = 4;
+// Philippines bounding box (proper framing)
+const PH_CENTER = { lat: 12.5, lon: 121.5 };
+const MIN_ZOOM = 4;
+const MAX_ZOOM = 8;
+const DEFAULT_ZOOM = 5;
 const SIZE = 512;
-const COLOR_SCHEME = 2; // Universal Blue color scheme
+const COLOR_SCHEME = 2; // Universal Blue
 const OPTIONS = '1_1'; // smooth=1, snow=1
+
+// Convert lat/lon to tile coordinates (for Slippy Map / OSM tile scheme)
+function latLonToTile(lat: number, lon: number, zoom: number) {
+  const n = Math.pow(2, zoom);
+  const x = Math.floor(((lon + 180) / 360) * n);
+  const latRad = (lat * Math.PI) / 180;
+  const y = Math.floor((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n);
+  return { x, y };
+}
 
 export function WeatherRiskMap() {
   const [frames, setFrames] = useState<RadarFrame[]>([]);
@@ -30,6 +40,11 @@ export function WeatherRiskMap() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pastCount, setPastCount] = useState(0);
+  const [zoom, setZoom] = useState(DEFAULT_ZOOM);
+  const [center, setCenter] = useState(PH_CENTER);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef<{ x: number; y: number; lat: number; lon: number } | null>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Fetch RainViewer radar data
@@ -49,9 +64,7 @@ export function WeatherRiskMap() {
         setHost(data.host);
         setFrames(allFrames);
         setPastCount(data.radar.past.length);
-        // Start at the last past frame (most recent actual data)
-        const pastLen = data.radar.past.length;
-        setCurrentFrame(Math.max(0, pastLen - 1));
+        setCurrentFrame(Math.max(0, data.radar.past.length - 1));
         setError(null);
       } catch {
         setError('Could not load radar data. Please try again later.');
@@ -82,6 +95,88 @@ export function WeatherRiskMap() {
     };
   }, [playing, frames.length]);
 
+  // Zoom handlers
+  const handleZoomIn = useCallback(() => {
+    setZoom((z) => Math.min(z + 1, MAX_ZOOM));
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    setZoom((z) => Math.max(z - 1, MIN_ZOOM));
+  }, []);
+
+  const handleReset = useCallback(() => {
+    setZoom(DEFAULT_ZOOM);
+    setCenter(PH_CENTER);
+  }, []);
+
+  // Mouse wheel zoom
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault();
+    if (e.deltaY < 0) {
+      setZoom((z) => Math.min(z + 1, MAX_ZOOM));
+    } else {
+      setZoom((z) => Math.max(z - 1, MIN_ZOOM));
+    }
+  }, []);
+
+  // Pan (drag) handlers
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    setIsDragging(true);
+    dragStart.current = { x: e.clientX, y: e.clientY, lat: center.lat, lon: center.lon };
+  }, [center]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isDragging || !dragStart.current) return;
+    const dx = e.clientX - dragStart.current.x;
+    const dy = e.clientY - dragStart.current.y;
+
+    // Convert pixel delta to lat/lon delta based on zoom
+    const scale = 360 / Math.pow(2, zoom) / SIZE;
+    const newLon = dragStart.current.lon - dx * scale;
+    const newLat = dragStart.current.lat + dy * scale;
+
+    // Clamp to reasonable bounds
+    setCenter({
+      lat: Math.max(4, Math.min(21, newLat)),
+      lon: Math.max(116, Math.min(128, newLon)),
+    });
+  }, [isDragging, zoom]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+    dragStart.current = null;
+  }, []);
+
+  // Touch support for mobile pan
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      setIsDragging(true);
+      dragStart.current = { x: touch.clientX, y: touch.clientY, lat: center.lat, lon: center.lon };
+    }
+  }, [center]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!isDragging || !dragStart.current || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - dragStart.current.x;
+    const dy = touch.clientY - dragStart.current.y;
+
+    const scale = 360 / Math.pow(2, zoom) / SIZE;
+    const newLon = dragStart.current.lon - dx * scale;
+    const newLat = dragStart.current.lat + dy * scale;
+
+    setCenter({
+      lat: Math.max(4, Math.min(21, newLat)),
+      lon: Math.max(116, Math.min(128, newLon)),
+    });
+  }, [isDragging, zoom]);
+
+  const handleTouchEnd = useCallback(() => {
+    setIsDragging(false);
+    dragStart.current = null;
+  }, []);
+
   function getFrameLabel(frame: RadarFrame | undefined): string {
     if (!frame) return '';
     const date = new Date(frame.time * 1000);
@@ -92,18 +187,45 @@ export function WeatherRiskMap() {
     });
   }
 
-  function getFrameType(index: number, pastCount: number): string {
-    if (index < pastCount) return 'past';
-    return 'forecast';
+  function getFrameType(index: number): string {
+    return index < pastCount ? 'past' : 'forecast';
   }
 
-  // Build tile URL for coordinate-based rendering
-  // RainViewer requires lat/lon to contain a dot (decimal format)
-  function getRadarTileUrl(frame: RadarFrame): string {
-    const lat = PH_LAT.toFixed(4);
-    const lon = PH_LON.toFixed(4);
-    return `${host}${frame.path}/${SIZE}/${ZOOM}/${lat}/${lon}/${COLOR_SCHEME}/${OPTIONS}.png`;
+  // Build tile URLs for a 3x3 grid around center for seamless coverage
+  function getTileGrid(frame: RadarFrame) {
+    const centerTile = latLonToTile(center.lat, center.lon, zoom);
+    const tiles: { x: number; y: number; url: string; key: string }[] = [];
+
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const tx = centerTile.x + dx;
+        const ty = centerTile.y + dy;
+        const url = `${host}${frame.path}/256/${zoom}/${tx}/${ty}/${COLOR_SCHEME}/${OPTIONS}.png`;
+        tiles.push({ x: dx, y: dy, url, key: `${tx}-${ty}` });
+      }
+    }
+    return { tiles, centerTile };
   }
+
+  // Calculate pixel offset for smooth panning within tile
+  function getPixelOffset() {
+    const n = Math.pow(2, zoom);
+    const xFloat = ((center.lon + 180) / 360) * n;
+    const latRad = (center.lat * Math.PI) / 180;
+    const yFloat = (1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n;
+
+    // Fractional part = how far into the center tile we are
+    const xFrac = xFloat - Math.floor(xFloat);
+    const yFrac = yFloat - Math.floor(yFloat);
+
+    // Convert to pixel offset (each tile is 256px in our 3x3 grid)
+    const offsetX = -(xFrac * 256 + 256); // shift left by fractional + 1 tile
+    const offsetY = -(yFrac * 256 + 256); // shift up by fractional + 1 tile
+
+    return { offsetX, offsetY };
+  }
+
+  const currentFrameData = frames[currentFrame];
 
   return (
     <div className="weather-risk-map">
@@ -120,52 +242,105 @@ export function WeatherRiskMap() {
         </div>
       )}
 
-      {/* Radar image display */}
-      <div className="risk-map-viewport">
-        {/* Philippines outline SVG for geographic context */}
-        <svg className="risk-map-outline" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-          {/* Simplified PH outline — Luzon, Visayas, Mindanao */}
-          <g fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="1.2">
-            {/* Luzon */}
-            <path d="M280,80 L295,85 L310,100 L315,120 L320,140 L310,160 L300,180 L295,200 L280,210 L270,200 L260,190 L255,170 L250,150 L245,130 L250,110 L260,95 Z" />
-            {/* Visayas */}
-            <path d="M240,260 L260,255 L275,260 L285,270 L280,280 L265,285 L250,280 Z" />
-            <path d="M290,255 L305,260 L310,270 L305,280 L295,275 Z" />
-            {/* Mindanao */}
-            <path d="M260,310 L280,300 L300,305 L320,310 L325,330 L320,350 L310,360 L290,365 L270,360 L260,345 L255,330 Z" />
-            {/* Palawan */}
-            <path d="M200,180 L205,200 L210,230 L215,260 L218,290 L215,310 L210,330" />
-          </g>
-        </svg>
+      {/* Radar viewport with zoom/pan */}
+      <div
+        className={`risk-map-viewport ${isDragging ? 'dragging' : ''}`}
+        ref={viewportRef}
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* Tile grid */}
+        {currentFrameData && host && (() => {
+          const { tiles } = getTileGrid(currentFrameData);
+          const { offsetX, offsetY } = getPixelOffset();
+          return (
+            <div
+              className="risk-map-tile-grid"
+              style={{
+                transform: `translate(${offsetX + 256}px, ${offsetY + 256}px)`,
+              }}
+            >
+              {tiles.map((tile) => (
+                <img
+                  key={tile.key}
+                  className="risk-map-tile"
+                  src={tile.url}
+                  alt=""
+                  draggable={false}
+                  style={{
+                    gridColumn: tile.x + 2,
+                    gridRow: tile.y + 2,
+                  }}
+                />
+              ))}
+            </div>
+          );
+        })()}
 
-        {/* Use the RainViewer coordinate-based tile as radar overlay */}
-        {frames.length > 0 && host && frames[currentFrame] && (
-          <img
-            className="risk-map-radar-img"
-            src={getRadarTileUrl(frames[currentFrame])}
-            alt={`Rain radar at ${getFrameLabel(frames[currentFrame])}`}
-            draggable={false}
-            onError={(e) => {
-              const img = e.currentTarget;
-              if (!img.dataset.retried) {
-                img.dataset.retried = 'true';
-                const frame = frames[currentFrame];
-                img.src = `${host}${frame.path}/${SIZE}/${ZOOM}/12.8797/121.7740/${COLOR_SCHEME}/${OPTIONS}.png`;
-              }
-            }}
-          />
-        )}
+        {/* Zoom controls */}
+        <div className="risk-map-zoom-controls">
+          <button
+            className="zoom-btn"
+            onClick={handleZoomIn}
+            disabled={zoom >= MAX_ZOOM}
+            aria-label="Zoom in"
+            title="Zoom in"
+          >
+            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
+          <button
+            className="zoom-btn"
+            onClick={handleZoomOut}
+            disabled={zoom <= MIN_ZOOM}
+            aria-label="Zoom out"
+            title="Zoom out"
+          >
+            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
+          <button
+            className="zoom-btn zoom-btn-reset"
+            onClick={handleReset}
+            aria-label="Reset view"
+            title="Reset view"
+          >
+            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+              <path d="M3 3v5h5" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Zoom level indicator */}
+        <div className="risk-map-zoom-level">
+          <span>{zoom}x</span>
+        </div>
+
         {/* No rain indicator */}
         {frames.length > 0 && !loading && !error && (
           <div className="risk-map-no-rain-hint">
-            Dark areas = no precipitation detected
+            Dark areas = no precipitation
           </div>
         )}
-        {/* Philippines label */}
+
+        {/* Region label */}
         <div className="risk-map-region-label">🇵🇭 Philippines Radar</div>
+
+        {/* Pan hint */}
+        <div className="risk-map-pan-hint">Drag to pan · Scroll to zoom</div>
       </div>
 
-      {/* Controls */}
+      {/* Timeline controls */}
       {frames.length > 0 && (
         <div className="risk-map-controls">
           <button
@@ -173,7 +348,16 @@ export function WeatherRiskMap() {
             onClick={() => setPlaying(!playing)}
             aria-label={playing ? 'Pause animation' : 'Play animation'}
           >
-            {playing ? '⏸' : '▶'}
+            {playing ? (
+              <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="4" width="4" height="16" rx="1" />
+                <rect x="14" y="4" width="4" height="16" rx="1" />
+              </svg>
+            ) : (
+              <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="5,3 19,12 5,21" />
+              </svg>
+            )}
           </button>
 
           <div className="risk-map-slider-container">
@@ -194,7 +378,7 @@ export function WeatherRiskMap() {
               {frames.map((_, i) => (
                 <span
                   key={i}
-                  className={`slider-tick ${i === currentFrame ? 'active' : ''} ${getFrameType(i, pastCount)}`}
+                  className={`slider-tick ${i === currentFrame ? 'active' : ''} ${getFrameType(i)}`}
                 />
               ))}
             </div>

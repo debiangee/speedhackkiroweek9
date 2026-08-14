@@ -172,12 +172,9 @@ export function computeVerdict(hourly: HourlyData[]): VerdictResult | null {
 
 function computeHourScore(h: HourlyData): number {
   const rp = clamp(scoreRainProb(h.precipitation_probability));
-  clamp(scorePrecipitation(h.precipitation * 24)); // scale single-hour to daily equivalent? No — use raw hourly
+  const precip = clamp(100 - (h.precipitation / 2) * 100); // 0mm=100, 2mm+=0 per hour
   const wi = clamp(scoreWind(h.wind_speed));
   const vi = clamp(scoreVisibility(h.visibility || 10000));
-
-  // Actually for hourly window, score precipitation per-hour directly
-  const precip = clamp(100 - (h.precipitation / 2) * 100); // 0mm=100, 2mm+=0 per hour
 
   return rp * 0.4 + precip * 0.25 + wi * 0.2 + vi * 0.15;
 }

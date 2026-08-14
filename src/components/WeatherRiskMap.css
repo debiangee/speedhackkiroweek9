@@ -10,33 +10,123 @@
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
-  max-height: 420px;
+  max-height: 450px;
   overflow: hidden;
   border-radius: var(--radius, 12px);
   background: radial-gradient(ellipse at center, #1a2332 0%, #0f1724 100%);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
 }
 
-.risk-map-outline {
+.risk-map-viewport.dragging {
+  cursor: grabbing;
+}
+
+/* === Tile grid (3x3 tiles) === */
+.risk-map-tile-grid {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  grid-template-columns: 256px 256px 256px;
+  grid-template-rows: 256px 256px 256px;
+  margin-top: -384px;
+  margin-left: -384px;
+  will-change: transform;
   pointer-events: none;
 }
 
-.risk-map-radar-img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.risk-map-tile {
+  width: 256px;
+  height: 256px;
+  display: block;
   opacity: 0.9;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-  z-index: 2;
+  image-rendering: auto;
 }
 
+/* === Zoom controls === */
+.risk-map-zoom-controls {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 10;
+}
+
+.zoom-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(15, 23, 42, 0.8);
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  backdrop-filter: blur(8px);
+}
+
+.zoom-btn:hover:not(:disabled) {
+  background: rgba(26, 115, 232, 0.8);
+  border-color: rgba(26, 115, 232, 0.6);
+  transform: scale(1.05);
+}
+
+.zoom-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.zoom-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.zoom-btn-reset {
+  margin-top: 4px;
+}
+
+/* === Zoom level indicator === */
+.risk-map-zoom-level {
+  position: absolute;
+  top: 12px;
+  left: 52px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(0, 0, 0, 0.4);
+  padding: 3px 7px;
+  border-radius: 4px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* === Pan hint === */
+.risk-map-pan-hint {
+  position: absolute;
+  bottom: 36px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.6rem;
+  color: rgba(255, 255, 255, 0.35);
+  background: rgba(0, 0, 0, 0.3);
+  padding: 2px 8px;
+  border-radius: 4px;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.3s;
+}
+
+.risk-map-viewport.dragging .risk-map-pan-hint {
+  opacity: 0;
+}
+
+/* === Region label === */
 .risk-map-region-label {
   position: absolute;
   bottom: 10px;
@@ -288,7 +378,7 @@
 
 /* === Dark mode === */
 [data-theme="dark"] .risk-map-viewport {
-  background: #0f1525;
+  background: #0a0f1a;
 }
 
 [data-theme="dark"] .risk-map-forecast-badge {
@@ -296,10 +386,15 @@
   color: #a78bfa;
 }
 
+[data-theme="dark"] .zoom-btn {
+  background: rgba(15, 23, 42, 0.9);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
 /* === Responsive === */
 @media (max-width: 600px) {
   .risk-map-viewport {
-    max-height: 320px;
+    max-height: 340px;
   }
 
   .risk-map-controls {
@@ -308,6 +403,15 @@
   }
 
   .risk-map-slider-ticks {
+    display: none;
+  }
+
+  .zoom-btn {
+    width: 28px;
+    height: 28px;
+  }
+
+  .risk-map-pan-hint {
     display: none;
   }
 }

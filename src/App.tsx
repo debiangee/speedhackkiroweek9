@@ -35,6 +35,11 @@ function App() {
       <footer className="app-footer">
         <div className="footer-credits">
           <span>Team Weather Lang &copy; {new Date().getFullYear()}</span>
+          <span className="footer-data-sources">
+            Data from <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>
+            {' | '}
+            Advisories via <a href="https://www.pagasa.dost.gov.ph/" target="_blank" rel="noopener noreferrer">PAGASA</a>
+          </span>
         </div>
       </footer>
       <Analytics />
