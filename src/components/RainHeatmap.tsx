@@ -1,27 +1,12 @@
+import { requestForecast } from '../services/forecast-provider';
+import { manilaDate } from '../utils/time';
+import { REGION_COORDS } from '../utils/locations';
 import { useState, useEffect, useMemo } from 'react';
 import { DropletIcon } from './Icons';
 import './RainHeatmap.css';
 
 // Region center coordinates for API calls
-const REGION_COORDS: Record<string, { lat: number; lon: number }> = {
-  'NCR': { lat: 14.5995, lon: 120.9842 },
-  'CAR': { lat: 16.4023, lon: 120.596 },
-  'Ilocos': { lat: 17.5747, lon: 120.3869 },
-  'Cagayan Valley': { lat: 17.6132, lon: 121.727 },
-  'Central Luzon': { lat: 15.145, lon: 120.5887 },
-  'CALABARZON': { lat: 14.1, lon: 121.3 },
-  'MIMAROPA': { lat: 9.7392, lon: 118.7353 },
-  'Bicol': { lat: 13.1391, lon: 123.7438 },
-  'Western Visayas': { lat: 10.7202, lon: 122.5621 },
-  'Central Visayas': { lat: 10.3157, lon: 123.8854 },
-  'Eastern Visayas': { lat: 11.25, lon: 125.0 },
-  'Zamboanga Peninsula': { lat: 6.9214, lon: 122.079 },
-  'Northern Mindanao': { lat: 8.4542, lon: 124.6319 },
-  'Davao': { lat: 7.1907, lon: 125.4553 },
-  'SOCCSKSARGEN': { lat: 6.5, lon: 124.85 },
-  'Caraga': { lat: 8.9475, lon: 125.5406 },
-  'BARMM': { lat: 7.2, lon: 124.23 },
-};
+
 
 // Map region names from GeoJSON to our data keys
 const REGION_NAME_MAP: Record<string, string> = {
@@ -135,15 +120,9 @@ export function RainHeatmap() {
         const batch = entries.slice(i, i + 4);
         const promises = batch.map(async ([region, coords]) => {
           try {
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&hourly=precipitation,precipitation_probability&timezone=Asia/Manila&forecast_days=1`;
-            const res = await fetch(url);
-            if (!res.ok) return { region, rainMm: null, probability: null };
-            const json = await res.json();
-            const valid = ['precipitation', 'precipitation_probability'].every(key => Array.isArray(json.hourly?.[key]) && json.hourly[key].length === 24 && json.hourly[key].every((v: unknown) => typeof v === 'number' && Number.isFinite(v) && v >= 0));
-            if (!valid) return { region, rainMm: null, probability: null };
-            const totalRain = (json.hourly?.precipitation || []).reduce((s: number, v: number) => s + (v || 0), 0);
-            const avgProb = (json.hourly?.precipitation_probability || []).reduce((s: number, v: number) => s + (v || 0), 0) / 24;
-            return { region, rainMm: Math.round(totalRain * 10) / 10, probability: Math.round(avgProb) };
+            const forecast = await requestForecast(coords);
+            const day = forecast.daily.find(d => d.date === manilaDate());
+            return { region, rainMm: day?.total_rain ?? null, probability: day?.avg_prob ?? null };
           } catch {
             return { region, rainMm: null, probability: null };
           }

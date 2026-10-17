@@ -1,3 +1,7 @@
+# Current architecture supersedes historical notes
+
+See docs/ARCHITECTURE.md and project.md. Active forecasts are Open-Meteo browser requests, not DuckDB/Parquet. The content below is historical context and must not guide current implementation.
+
 # PH Rain Forecast — Session Memory
 
 ## System Context

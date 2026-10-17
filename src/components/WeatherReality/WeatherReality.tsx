@@ -1,3 +1,4 @@
+import { useClock } from '../../hooks/useClock';
 import { useState, useMemo, useEffect } from 'react';
 import { HourlyData } from '../../hooks/useWeatherData';
 import {
@@ -42,7 +43,8 @@ export function WeatherReality({
   isModal = false,
   onClose,
 }: WeatherRealityProps) {
-  hourly = remainingForecast(hourly);
+  const now = useClock();
+  hourly = remainingForecast(hourly, now);
   const [timelineIndex, setTimelineIndex] = useState(initialForecastHourOffset);
   const [viewMode, setViewMode] = useState<'street' | 'map' | 'split'>('street');
   const [showOverlay, setShowOverlay] = useState(true);

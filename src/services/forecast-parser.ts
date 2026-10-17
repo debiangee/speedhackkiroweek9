@@ -1,5 +1,5 @@
 // Fail closed: incomplete forecasts never enter recommendation engines.
-import type { HourlyData, DailySummary } from '../hooks/useWeatherData';
+import type { HourlyData, DailySummary } from '../models/weather';
 
 export const FORECAST_FIELDS = ["temperature_2m", "relative_humidity_2m", "dew_point_2m", "precipitation", "precipitation_probability", "wind_speed_10m", "wind_gusts_10m", "weather_code", "cloud_cover", "visibility", "uv_index"] as const;
 const RANGES: Record<string, readonly [number, number]> = {"temperature_2m": [-100, 70], "relative_humidity_2m": [0, 100], "dew_point_2m": [-120, 70], "precipitation": [0, 1000], "precipitation_probability": [0, 100], "wind_speed_10m": [0, 500], "wind_gusts_10m": [0, 600], "weather_code": [0, 99], "cloud_cover": [0, 100], "visibility": [0, 100000], "uv_index": [0, 100]};

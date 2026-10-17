@@ -1,3 +1,4 @@
+import { useClock } from '../hooks/useClock';
 import { manilaHour } from '../utils/time';
 import { useMemo, useState } from 'react';
 import type { HourlyData, DailySummary } from '../hooks/useWeatherData';
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export function TransportSurgePredictor({ hourly, cityCoords }: Props) {
+  useClock();
   const [selectedDayIdx, setSelectedDayIdx] = useState(0);
   const currentHour = manilaHour();
 

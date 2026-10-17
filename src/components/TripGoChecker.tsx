@@ -1,3 +1,4 @@
+import { useClock } from '../hooks/useClock';
 import { useState, useEffect, useMemo } from 'react';
 import { useWeatherData } from '../hooks/useWeatherData';
 import { remainingForecast } from '../utils/time';
@@ -32,6 +33,7 @@ function getDayDate(dateStr: string): string {
 }
 
 export function TripGoChecker({ hourly, daily, region }: Props) {
+  useClock();
   // Destination state (independent from dashboard region)
   const [destRegion, setDestRegion] = useState<string>(() => {
     return sessionStorage.getItem('trip-dest-region') || '';
