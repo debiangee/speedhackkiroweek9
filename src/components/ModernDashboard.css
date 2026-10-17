@@ -47,3 +47,10 @@ html { scroll-padding-top: 6rem; }
 .tgc-select-group { min-width: 0; flex-basis: 180px; max-width: 100%; }
 .tgc-select { width: 100%; min-width: 0; background: var(--bg-input); color: var(--text-primary); }
 @media (max-width: 480px) { .app-header { flex-wrap: wrap; gap: 1rem; } .header-brand h1 { white-space: normal; } .header-brand p { font-size: .8rem; } .header-actions { margin-left: auto; } }
+
+.saved-locations { display: flex; gap: .5rem; flex-wrap: wrap; margin: 1rem 0; }
+.saved-locations > div { display: flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; max-width: 100%; }
+.saved-locations button { color: var(--text-primary); background: var(--bg-card); border: 0; padding: .5rem .7rem; }
+.lite-control { display: flex; align-items: center; gap: .65rem; padding: .75rem 0; color: var(--text-primary); }
+.lite-control input { width: 20px; height: 20px; accent-color: var(--accent); }
+button:disabled { cursor: not-allowed; opacity: .65; }

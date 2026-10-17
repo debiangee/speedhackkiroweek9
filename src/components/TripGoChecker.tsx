@@ -1,3 +1,4 @@
+import { resolveLocation } from '../utils/locations';
 import { readPreference, writePreference } from '../utils/storage';
 import { useLocale } from '../hooks/useLocale';
 import { useClock } from '../hooks/useClock';
@@ -41,10 +42,12 @@ export function TripGoChecker({ hourly, daily, region }: Props) {
   const [departure, setDeparture] = useState('remaining');
   // Destination state (independent from dashboard region)
   const [destRegion, setDestRegion] = useState<string>(() => {
-    return readPreference('trip-dest-region', true) || '';
+    const stored = readPreference('trip-dest-region', true) || '';
+    return resolveLocation(stored) ? stored : '';
   });
   const [destCity, setDestCity] = useState<string | null>(() => {
-    return readPreference('trip-dest-city', true) || null;
+    const city = readPreference('trip-dest-city', true);
+    return resolveLocation(readPreference('trip-dest-region', true) || '', city) ? city : null;
   });
   const [selectedDay, setSelectedDay] = useState(0);
 

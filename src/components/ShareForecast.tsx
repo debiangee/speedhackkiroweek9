@@ -1,3 +1,5 @@
+import { forecastUrl } from '../utils/forecast-context';
+import { resolveLocation } from '../utils/locations';
 import { useState } from 'react';
 import { type DailySummary } from '../hooks/useWeatherData';
 import { getRegionLabel } from '../utils/regions';
@@ -7,31 +9,35 @@ interface ShareForecastProps {
   region: string;
   daily: DailySummary[];
   selectedCity?: string | null;
+  selectedDate?: string;
 }
 
-export function ShareForecast({ region, daily, selectedCity }: ShareForecastProps) {
+export function ShareForecast({ region, daily, selectedCity, selectedDate }: ShareForecastProps) {
+  const [failure, setFailure] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const location = selectedCity || getRegionLabel(region);
-  const today = daily[0];
+  const today = daily.find(d=>d.date===selectedDate) ?? daily[0];
 
   if (!today) return null;
 
-  const shareText = `${location} Weather\n` +
-    `Rain: ${today.avg_prob}% chance | ${today.total_rain}mm expected\n` +
+  const url = forecastUrl(window.location.href, resolveLocation(region, selectedCity)?.id ?? 'NCR:reference', today.date);
+  const shareText = `${location} Forecast · ${today.date} PHT\n` +
+    `Rain: ${today.avg_prob}% mean hourly probability | ${today.total_rain}mm expected\n` +
     `Temp: ${today.min_temp}°–${today.max_temp}°C\n` +
-    `— via Team Weather Lang`;
+    `— Open-Meteo via Team Weather Lang. Forecasts change; open the link for current data.`;
 
   async function handleShare() {
+    setFailure(null);
     if (navigator.share) {
       try {
         await navigator.share({
           title: `Weather: ${location}`,
           text: shareText,
-          url: window.location.href,
+          url,
         });
-      } catch {
-        // User cancelled or share failed
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === 'AbortError')) setFailure('Sharing unavailable. Copy the URL from your address bar.');
       }
     } else {
       await handleCopy();
@@ -40,11 +46,11 @@ export function ShareForecast({ region, daily, selectedCity }: ShareForecastProp
 
   async function handleCopy() {
     try {
-      await navigator.clipboard.writeText(shareText + '\n' + window.location.href);
+      await navigator.clipboard.writeText(shareText + '\n' + url);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Clipboard failed
+      setFailure('Clipboard unavailable. Copy the URL from your address bar.');
     }
   }
 
@@ -60,6 +66,7 @@ export function ShareForecast({ region, daily, selectedCity }: ShareForecastProp
         </svg>
         {copied ? 'Copied!' : 'Share'}
       </button>
+      {failure && <span role="status">{failure}</span>}
     </div>
   );
 }
