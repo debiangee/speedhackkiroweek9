@@ -1,3 +1,5 @@
+import { useWeatherData } from '../../hooks/useWeatherData';
+import { useRef } from 'react';
 import { useClock } from '../../hooks/useClock';
 import { useState, useMemo, useEffect } from 'react';
 import { HourlyData } from '../../hooks/useWeatherData';
@@ -44,7 +46,8 @@ export function WeatherReality({
   onClose,
 }: WeatherRealityProps) {
   const now = useClock();
-  hourly = remainingForecast(hourly, now);
+  // The parent forecast is not assumed to describe a different imagery landmark.
+  void hourly;
   const [timelineIndex, setTimelineIndex] = useState(initialForecastHourOffset);
   const [viewMode, setViewMode] = useState<'street' | 'map' | 'split'>('street');
   const [showOverlay, setShowOverlay] = useState(true);
@@ -64,6 +67,29 @@ export function WeatherReality({
 
   // Active coordinates
   const currentCoords = activeLandmark || regionProfile.defaultSpot;
+  const scene = useWeatherData(region, currentCoords);
+  const sceneHours = remainingForecast(scene.hourly, now);
+  const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!isExpanded) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const root = rootRef.current;
+    root?.focus();
+    const keydown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { e.preventDefault(); setIsExpanded(false); }
+      if (e.key === 'Tab' && root) {
+        const controls = Array.from(root.querySelectorAll<HTMLElement>('button, a[href], input, iframe, [tabindex="0"]')).filter(el => el.getClientRects().length && !el.hasAttribute('disabled'));
+        const first = controls[0], last = controls[controls.length-1];
+        if (e.shiftKey && (document.activeElement === first || document.activeElement === root)) { e.preventDefault(); last?.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+      }
+    };
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown',keydown);
+    return () => { document.body.style.overflow = overflow; document.removeEventListener('keydown',keydown); previous?.focus(); };
+  }, [isExpanded]);
+  useEffect(() => { setTimelineIndex(0); }, [currentCoords.lat, currentCoords.lon]);
   const locationName = activeLandmark
     ? activeLandmark.name
     : selectedCity
@@ -72,40 +98,22 @@ export function WeatherReality({
 
   // Sync timeline offset if passed from Kuya Weather
   useEffect(() => {
-    if (initialForecastHourOffset >= 0 && initialForecastHourOffset < hourly.length) {
+    if (initialForecastHourOffset >= 0 && initialForecastHourOffset < sceneHours.length) {
       setTimelineIndex(initialForecastHourOffset);
     }
-  }, [initialForecastHourOffset, hourly.length]);
+  }, [initialForecastHourOffset, sceneHours.length]);
 
   // Derive simulation state from current hourly data and timeline index
-  const simState = useMemo<WeatherSimulationState>(() => {
-    if (!hourly || hourly.length === 0) {
-      return mapWeatherToSimulation({
-        time: new Date().toISOString(),
-        date: new Date().toISOString().split('T')[0],
-        hour: new Date().getHours(),
-        temperature: 28,
-        humidity: 75,
-        precipitation: 0,
-        precipitation_probability: 10,
-        wind_speed: 10,
-        wind_gusts: 15,
-        weather_code: 1,
-        cloud_cover: 30,
-        dew_point: 22,
-        visibility: 10000,
-        uv_index: 5,
-      });
-    }
-
-    const currentEntry = hourly[timelineIndex] || hourly[0];
-    return mapWeatherToSimulation(currentEntry);
-  }, [hourly, timelineIndex]);
+  const simState = useMemo<WeatherSimulationState | null>(() => {
+    const entry = sceneHours[timelineIndex] || sceneHours[0];
+    return entry ? mapWeatherToSimulation(entry) : null;
+  }, [sceneHours, timelineIndex]);
+  if (!simState || scene.loading || scene.error) return <div className="section-card"><h3>Weather Reality</h3><p role="status">{scene.loading ? 'Loading a forecast for the imagery coordinates…' : scene.error || 'No valid forecast for this imagery point.'}</p>{scene.error && <button onClick={scene.refetch}>Retry imagery-point forecast</button>}</div>;
 
   const isForecastMode = true;
 
   return (
-    <div className={`weather-reality-card ${isExpanded ? 'fullscreen-mode' : ''}`}>
+    <div ref={rootRef} tabIndex={-1} role={isExpanded ? 'dialog' : 'region'} aria-modal={isExpanded || undefined} aria-label="Weather Reality simulation" className={`weather-reality-card ${isExpanded ? 'fullscreen-mode' : ''}`}>
       {/* Header */}
       <div className="weather-reality-header">
         <div className="title-group">
@@ -206,7 +214,7 @@ export function WeatherReality({
         </div>
       )}
 
-      <p>Imagery is a curated regional landmark, not necessarily the selected city. Weather uses the selected forecast point and does not verify conditions at the landmark.</p>
+      <p>Imagery is a curated regional landmark, not necessarily the selected city. Weather is requested for the displayed imagery coordinates; the overlay is a model simulation, not observed street conditions.</p>
       {/* Main Viewport Container */}
       <div className="simulation-stage-container">
         <div className={`simulation-stage view-mode-${viewMode}`}>
@@ -251,7 +259,7 @@ export function WeatherReality({
 
       {/* Forecast Timeline Bar */}
       <WeatherTimeline
-        hourly={hourly}
+        hourly={sceneHours}
         selectedIndex={timelineIndex}
         onSelectIndex={setTimelineIndex}
       />

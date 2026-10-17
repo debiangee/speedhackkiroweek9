@@ -1,3 +1,5 @@
+import { summarizeHours } from '../utils/daily';
+import { criticalHazard, hasCriticalData } from '../utils/trip-verdict';
 import { useState, useMemo } from 'react';
 import { type HourlyData, type DailySummary } from '../hooks/useWeatherData';
 import { SunIcon, CheckCircleIcon, AlertCircleIcon, BeachIcon, HikingIcon, CarIcon, EventIcon, BicycleIcon } from './Icons';
@@ -26,9 +28,13 @@ interface DayScore {
   verdict: 'great' | 'okay' | 'avoid';
 }
 
-function scoreDay(activity: Activity, day: DailySummary, dayHourly: HourlyData[]): DayScore {
+export function scoreDay(activity: Activity, day: DailySummary, dayHourly: HourlyData[]): DayScore {
   const dateLabel = new Date(day.date + 'T00:00:00').toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric' });
   
+  if (!dayHourly.length || dayHourly.some(h => !hasCriticalData(h))) return { date: day.date, label: dateLabel, score: 0, reason: 'Weather suitability unavailable', verdict: 'avoid' };
+  const hazard = dayHourly.map(criticalHazard).find(Boolean);
+  if (hazard) return { date: day.date, label: dateLabel, score: 0, reason: `${hazard}; consult official sources`, verdict: 'avoid' };
+  day = summarizeHours(dayHourly)[0];
   let score = 100;
   let reason = '';
 
@@ -51,7 +57,7 @@ function scoreDay(activity: Activity, day: DailySummary, dayHourly: HourlyData[]
       // Prefer cooler temps, absolutely no heavy rain
       if (day.max_temp > 34) score -= 10;
       if (day.avg_prob > 50) score -= 30;
-      reason = day.avg_prob < 30 ? 'Good trail conditions' :
+      reason = day.avg_prob < 30 ? 'Lower forecast disruption; trails unverified' :
         day.avg_prob < 60 ? 'Trails may be slippery' : 'Too risky — slippery trails';
       break;
 
@@ -59,15 +65,15 @@ function scoreDay(activity: Activity, day: DailySummary, dayHourly: HourlyData[]
       // Moderate rain is main concern (flooding)
       if (day.total_rain > 20) score -= 40;
       else if (day.total_rain > 10) score -= 20;
-      reason = day.total_rain < 5 ? 'Light traffic expected' :
-        day.total_rain < 15 ? 'Expect slower traffic' : 'Flood risk on roads';
+      reason = day.total_rain < 5 ? 'Lower forecast rainfall; traffic unknown' :
+        day.total_rain < 15 ? 'Forecast rain may affect plans; traffic unknown' : 'Higher forecast rainfall; flood conditions unknown';
       break;
 
     case 'outdoor-event':
       // No rain is critical
       if (day.avg_prob > 40) score -= 40;
       if (day.total_rain > 5) score -= 20;
-      reason = day.avg_prob < 20 ? 'Perfect event weather' :
+      reason = day.avg_prob < 20 ? 'Lower forecast rain probability' :
         day.avg_prob < 50 ? 'Have a backup plan' : 'Consider indoor venue';
       break;
 
@@ -76,8 +82,8 @@ function scoreDay(activity: Activity, day: DailySummary, dayHourly: HourlyData[]
       const windAvg = dayHourly.length > 0 ? dayHourly.reduce((s, h) => s + h.wind_speed, 0) / dayHourly.length : 0;
       if (windAvg > 25) score -= 25;
       if (day.total_rain > 10) score -= 30;
-      reason = day.avg_prob < 25 && windAvg < 20 ? 'Ideal riding conditions' :
-        day.avg_prob < 50 ? 'Bring rain gear' : 'Unsafe — poor visibility';
+      reason = day.avg_prob < 25 && windAvg < 20 ? 'Lower forecast rain and wind; roads unverified' :
+        day.avg_prob < 50 ? 'Bring rain gear' : 'Higher forecast rain probability';
       break;
   }
 
@@ -96,13 +102,14 @@ export function ActivityPlanner({ hourly, daily }: ActivityPlannerProps) {
     return daily.map((day) => {
       const dayHourly = hourly.filter((h) => h.date === day.date);
       return scoreDay(selected, day, dayHourly);
-    }).sort((a, b) => b.score - a.score);
+    }).filter(day => hourly.some(h => h.date === day.date)).sort((a, b) => b.score - a.score);
   }, [selected, daily, hourly]);
 
   const bestDay = recommendations[0];
 
   return (
     <div className="activity-planner">
+      <p>Ranks remaining forecast hours by rain, wind and temperature. Scores are product heuristics, not safety probabilities. Waves, trails, roads and flood conditions are unknown.</p>
       <div className="activity-selector">
         {ACTIVITIES.map((a) => (
           <button

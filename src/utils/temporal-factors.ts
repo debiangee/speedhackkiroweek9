@@ -45,7 +45,9 @@ function isSameDate(date: Date, month: number, day: number): boolean {
  * Check if a date is a Philippine holiday
  */
 export function isHoliday(date: Date): boolean {
-  return PH_HOLIDAYS_2026.some(([m, d]) => isSameDate(date, m, d));
+  // New Year's Day is fixed; variable-date assumptions remain limited to 2026.
+  if (date.getMonth() === 0 && date.getDate() === 1) return true;
+  return date.getFullYear() === 2026 && PH_HOLIDAYS_2026.some(([m, d]) => isSameDate(date, m, d));
 }
 
 /**

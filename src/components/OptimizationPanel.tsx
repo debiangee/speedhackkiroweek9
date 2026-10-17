@@ -113,14 +113,14 @@ export function OptimizationPanel({ hourly, daily, region: _region }: Props) {
           <div className="opt-verdict-text">
             <strong className="opt-verdict">{result.verdict}</strong>
             <span className="opt-meta">
-              Iteration #{result.iterationCount} · {result.lastUpdated}
+              Calculation #{result.iterationCount} · {result.lastUpdated}
             </span>
           </div>
         </div>
 
         {/* Confidence */}
         <div className="opt-confidence-section">
-          <span className="opt-section-label">Confidence Score</span>
+          <span className="opt-section-label">Suitability score (heuristic)</span>
           <ConfidenceMeter value={result.confidence} />
         </div>
 

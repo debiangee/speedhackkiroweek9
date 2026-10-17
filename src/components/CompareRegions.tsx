@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { CloudRainIcon, ThermometerIcon, DropletIcon, WindIcon, CheckCircleIcon, HandshakeIcon } from './Icons';
 import { REGIONS, getRegionNumber } from '../utils/regions';
 import { REGION_CITIES } from '../utils/cities';
@@ -29,6 +29,7 @@ async function fetchLocationDay(lat: number, lon: number, label: string, date: s
 }
 
 export function CompareRegions({ date, onClose }: Props) {
+  const requestId = useRef(0);
   // Location A
   const [regionA, setRegionA] = useState('NCR');
   const [cityA, setCityA] = useState('');
@@ -41,6 +42,7 @@ export function CompareRegions({ date, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => { requestId.current++; setStatsA(null); setStatsB(null); setLoading(false); setError(null); }, [regionA, cityA, regionB, cityB, date]);
   const citiesA = REGION_CITIES[regionA] || [];
   const citiesB = REGION_CITIES[regionB] || [];
 
@@ -56,12 +58,14 @@ export function CompareRegions({ date, onClose }: Props) {
     const labelA = cityA || `${getRegionNumber(regionA)} (center)`;
     const labelB = cityB || `${getRegionNumber(regionB)} (center)`;
 
+    const request = ++requestId.current;
     setLoading(true);
     setError(null);
     Promise.all([
       fetchLocationDay(coordsA.lat, coordsA.lon, labelA, date),
       fetchLocationDay(coordsB.lat, coordsB.lon, labelB, date),
     ]).then(([a, b]) => {
+      if (request !== requestId.current) return;
       if (!a || !b) setError('Comparison unavailable for one or both locations. Try again.');
       setStatsA(a);
       setStatsB(b);
