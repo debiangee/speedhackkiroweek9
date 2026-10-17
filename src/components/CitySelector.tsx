@@ -22,7 +22,7 @@ export function CitySelector({ region, selectedCity, onSelectCity }: Props) {
         aria-selected={selectedCity === null}
       >
         <MapPinIcon size={12} color={selectedCity === null ? 'white' : 'var(--text-muted)'} />
-        <span>Entire Region</span>
+        <span>Regional reference</span>
       </button>
       {cities.map((city) => (
         <button

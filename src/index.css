@@ -13,7 +13,7 @@
   --bg-glass: #ffffff;
   --text-primary: #111827;
   --text-secondary: #4b5563;
-  --text-muted: #9ca3af;
+  --text-muted: #657084;
   --border: #e5e7eb;
   --border-color: #e5e7eb;
   --border-light: #f3f4f6;
@@ -21,7 +21,7 @@
   --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.08);
   --shadow-glow: 0 0 0 2px rgba(26, 115, 232, 0.15);
-  --accent: #1a73e8;
+  --accent: #155cc0;
   --accent-light: #eff6ff;
   --accent-hover: #1557b0;
   --accent-glow: rgba(26, 115, 232, 0.15);
@@ -57,7 +57,7 @@
   --bg-glass: #1a1d27;
   --text-primary: #f1f5f9;
   --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  --text-muted: #a0aec0;
   --border: #2d3139;
   --border-color: #2d3139;
   --border-light: #23262e;

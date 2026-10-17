@@ -68,7 +68,7 @@ export function EmergencyHotlines({ region }: Props) {
             <span>Near You — {getRegionLabel(region)}</span>
           </h4>
           <p className="hotlines-source">Office of Civil Defense – {regional.label}</p>
-          <div className="hotlines-grid" role="list" aria-label={`Emergency hotlines for ${regional.label}`}>
+          <div className="hotlines-grid" role="group" aria-label={`Emergency hotlines for ${regional.label}`}>
             {regional.hotlines.map((h, i) => (
               <HotlineCard key={i} hotline={h} />
             ))}
@@ -97,7 +97,7 @@ export function EmergencyHotlines({ region }: Props) {
             <FlagIcon size={16} color="var(--accent)" />
             <span>National Emergency Numbers</span>
           </h4>
-          <div className="hotlines-grid" role="list" aria-label="National emergency hotlines">
+          <div className="hotlines-grid" role="group" aria-label="National emergency hotlines">
             {national.map((h, i) => (
               <HotlineCard key={i} hotline={h} />
             ))}

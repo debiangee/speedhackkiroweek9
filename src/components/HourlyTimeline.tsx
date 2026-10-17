@@ -31,8 +31,8 @@ export function HourlyTimeline({ hourly }: Props) {
   const nowHour = new Date().getHours();
 
   return (
-    <div className="hourly-timeline" role="list" aria-label="Hourly rain forecast">
-      <div className="timeline-scroll">
+    <div className="hourly-timeline" role="group" aria-label="Hourly rain forecast">
+      <div className="timeline-scroll" role="list" tabIndex={0} aria-label="Hourly forecast values">
         {hourly.map((h) => {
           const severity = getProbabilitySeverity(h.precipitation_probability);
           return (

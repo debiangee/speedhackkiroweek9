@@ -21,7 +21,7 @@ export function useDarkMode() {
     } else {
       root.removeAttribute('data-theme');
     }
-    localStorage.setItem(STORAGE_KEY, String(isDark));
+    try { localStorage.setItem(STORAGE_KEY, String(isDark)); } catch { /* optional */ }
   }, [isDark]);
 
   const toggle = useCallback(() => setIsDark((prev) => !prev), []);
