@@ -1,22 +1,10 @@
+import { parseRadar, type RadarFrame } from '../services/radar';
 import { useEffect, useState, useRef } from 'react';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { AlertCircleIcon, FlagIcon } from './Icons';
 import 'leaflet/dist/leaflet.css';
 import './WeatherRiskMap.css';
-
-interface RadarFrame {
-  time: number;
-  path: string;
-}
-
-interface RainViewerData {
-  host: string;
-  radar: {
-    past: RadarFrame[];
-    nowcast?: RadarFrame[];
-  };
-}
 
 // Philippines framing + hard bounds so users stay over PH
 const PH_CENTER: [number, number] = [12.5, 122.0];
@@ -119,9 +107,9 @@ export function WeatherRiskMap() {
     async function fetchRadarData() {
       try {
         setLoading(true);
-        const res = await fetch('https://api.rainviewer.com/public/weather-maps.json');
+        const res = await fetch('https://api.rainviewer.com/public/weather-maps.json', {cache:'no-store', signal:AbortSignal.timeout(12000)});
         if (!res.ok) throw new Error('Failed to fetch radar data');
-        const data: RainViewerData = await res.json();
+        const data = parseRadar(await res.json());
 
         const allFrames = [
           ...data.radar.past,
@@ -168,7 +156,7 @@ export function WeatherRiskMap() {
     return date.toLocaleTimeString('en-PH', {
       hour: '2-digit',
       minute: '2-digit',
-      hour12: true,
+      hour12: true, timeZone: 'Asia/Manila',
     });
   }
 

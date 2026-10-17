@@ -5,15 +5,18 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm run typecheck && vite build",
     "preview": "vite preview",
-    "pipeline": "npx tsx pipeline/generate-data.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
-    "test:e2e:report": "playwright show-report"
+    "test:e2e:report": "playwright show-report",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src e2e vite.config.ts vitest.config.ts",
+    "check": "npm run lint && npm run build && npm test && npm run test:e2e",
+    "perf:local": "node --import tsx scripts/measure-performance.mjs"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
@@ -21,11 +24,11 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-leaflet": "^4.2.1",
-    "recharts": "^2.12.7",
-    "three": "^0.185.1"
+    "recharts": "^2.12.7"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.62.1",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",
@@ -33,12 +36,17 @@
     "@types/node": "^24.19.2",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
-    "@types/three": "^0.185.4",
     "@vitejs/plugin-react": "^4.3.1",
+    "eslint": "^10.13.0",
     "jsdom": "^30.0.1",
     "tsx": "^4.19.4",
     "typescript": "^5.5.3",
-    "vite": "^5.4.0",
-    "vitest": "^4.1.10"
+    "typescript-eslint": "^8.71.2",
+    "vite": "^6.4.4",
+    "vitest": "^4.1.12"
+  },
+  "engines": {
+    "node": "^24.15.0 || >=26.0.0",
+    "npm": ">=11"
   }
 }

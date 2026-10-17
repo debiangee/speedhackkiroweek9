@@ -1,7 +1,7 @@
 import { getCached, setCache } from '../hooks/useWeatherCache';
 import type { ForecastRecord } from '../models/weather';
-import { parseForecast, FORECAST_FIELDS } from './forecast-parser';
-import { currentForecastIndex } from '../utils/time';
+import { parseForecast, revalidateHourly, FORECAST_FIELDS } from './forecast-parser';
+import { currentForecastIndex, manilaDate } from '../utils/time';
 
 export class ForecastError extends Error {
   constructor(public readonly kind: 'network' | 'timeout' | 'rate-limit' | 'invalid' | 'unavailable', message: string) { super(message); this.name = 'ForecastError'; }
@@ -9,7 +9,7 @@ export class ForecastError extends Error {
 interface Pending { promise: Promise<ForecastRecord>; controller: AbortController; subscribers: number }
 const pending = new Map<string, Pending>();
 async function download(lat: number, lon: number, signal: AbortSignal): Promise<ForecastRecord> {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=${FORECAST_FIELDS.join(',')}&timezone=Asia/Manila&forecast_days=7`;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=${FORECAST_FIELDS.join(',')}&timezone=Asia/Manila&forecast_days=7&wind_speed_unit=kmh&temperature_unit=celsius&precipitation_unit=mm`;
   for (let attempt = 0; attempt < 2; attempt++) {
     let response: Response;
     try { response = await fetch(url, { signal, cache: 'no-store' }); }
@@ -26,7 +26,7 @@ async function download(lat: number, lon: number, signal: AbortSignal): Promise<
     if (!response.ok) throw new ForecastError(response.status === 429 ? 'rate-limit' : 'unavailable', `Forecast provider unavailable (${response.status}). Please retry.`);
     try {
       const data = parseForecast(await response.json());
-      if (currentForecastIndex(data.hourly) < 0) throw new Error('No current forecast hour');
+      if (currentForecastIndex(data.hourly) < 0 || data.daily[0].date !== manilaDate()) throw new Error('No current forecast hour');
       const record: ForecastRecord = { ...data, metadata: { provider: 'Open-Meteo', sourceUrl: 'https://open-meteo.com/', point: { lat, lon }, timezone: 'Asia/Manila', modelReferenceTime: null, retrievedAt: Date.now(), validFrom: data.hourly[0].time, validTo: data.hourly[data.hourly.length - 1].time, quality: 'validated', delivery: 'network', cacheAgeMs: 0, units: { temperature: '°C', wind: 'km/h', precipitation: 'mm', visibility: 'm', probability: '%' } } };
       setCache(`forecast-v3-${lat}-${lon}`, record);
       return record;
@@ -41,10 +41,13 @@ export function requestForecast(point: { lat: number; lon: number }, signal?: Ab
   if (signal?.aborted) return Promise.reject(new DOMException('Aborted', 'AbortError'));
   const key = `forecast-v3-${lat}-${lon}`;
   const cached = getCached<ForecastRecord>(key);
-  // Validate persisted data before trusting it, including exact point and timestamps.
-  if (cached?.metadata?.quality === 'validated' && cached.metadata.point.lat === lat && cached.metadata.point.lon === lon && Number.isFinite(cached.metadata.retrievedAt) && Date.now() - cached.metadata.retrievedAt >= 0 && Date.now() - cached.metadata.retrievedAt < 1800000 && Array.isArray(cached.hourly) && cached.hourly.every(h => Object.values(h).every(v => typeof v !== 'number' || Number.isFinite(v))) && cached.hourly.every(h => ['temperature','humidity','precipitation','precipitation_probability','wind_speed','wind_gusts','visibility','weather_code','cloud_cover','dew_point','uv_index'].every(k => typeof h[k as keyof typeof h] === 'number')) && currentForecastIndex(cached.hourly) >= 0 && Array.isArray(cached.daily)) {
-    return Promise.resolve({ ...cached, metadata: { ...cached.metadata, delivery: 'cache', cacheAgeMs: Date.now() - cached.metadata.retrievedAt } });
-  }
+  try {
+    const meta=cached?.metadata;
+    if(meta?.provider==='Open-Meteo' && meta.quality==='validated' && meta.point.lat===lat && meta.point.lon===lon && Number.isFinite(meta.retrievedAt) && Date.now()-meta.retrievedAt>=0 && Date.now()-meta.retrievedAt<1800000) {
+      const validated=revalidateHourly(cached?.hourly);
+      if(currentForecastIndex(validated.hourly)>=0 && validated.daily[0].date===manilaDate()) return Promise.resolve({...validated,metadata:{...meta,modelReferenceTime:null,delivery:'cache',cacheAgeMs:Date.now()-meta.retrievedAt,validFrom:validated.hourly[0].time,validTo:validated.hourly[validated.hourly.length-1].time}});
+    }
+  } catch { /* Corrupt browser data is discarded; fetch validated provider data. */ }
   let entry = pending.get(key);
   if (!entry || entry.controller.signal.aborted) {
     const controller = new AbortController();

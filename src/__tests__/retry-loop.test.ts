@@ -1,170 +1,27 @@
-import { describe, it, expect, vi } from 'vitest';
-
-// Re-implement the retry logic from useWeatherData for testing
-// Using a minimal delay (0ms) for test performance
-async function fetchWithRetry(
-  url: string,
-  retries = 3,
-  fetchFn: (url: string) => Promise<Response>
-): Promise<Response> {
-  for (let attempt = 0; attempt < retries; attempt++) {
-    const response = await fetchFn(url);
-    if (response.ok) return response;
-    if (response.status === 429 && attempt < retries - 1) {
-      // In production this is 2000 * Math.pow(2, attempt) — here we skip the delay
-      continue;
-    }
-    throw new Error(
-      response.status === 429
-        ? 'Weather service is busy. Please wait a moment and try again.'
-        : `Weather API error: ${response.status}`
-    );
-  }
-  throw new Error('Failed after retries');
-}
-
-// CompareRegions retry loop (slightly different behavior)
-async function fetchCompareWithRetry(
-  url: string,
-  fetchFn: (url: string) => Promise<Response>
-): Promise<Response> {
-  let response: Response | null = null;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    response = await fetchFn(url);
-    if (response.ok) break;
-    if (response.status === 429) {
-      continue;
-    }
-    break;
-  }
-  return response!;
-}
-
-describe('fetchWithRetry (for-loop retry)', () => {
-  it('returns immediately on success', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({ ok: true, status: 200 });
-    const result = await fetchWithRetry('http://test.com', 3, mockFetch);
-    expect(result.ok).toBe(true);
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('retries on 429 and succeeds on second attempt', async () => {
-    const mockFetch = vi.fn()
-      .mockResolvedValueOnce({ ok: false, status: 429 })
-      .mockResolvedValueOnce({ ok: true, status: 200 });
-
-    const result = await fetchWithRetry('http://test.com', 3, mockFetch);
-    expect(result.ok).toBe(true);
-    expect(mockFetch).toHaveBeenCalledTimes(2);
-  });
-
-  it('retries on 429 and succeeds on third attempt', async () => {
-    const mockFetch = vi.fn()
-      .mockResolvedValueOnce({ ok: false, status: 429 })
-      .mockResolvedValueOnce({ ok: false, status: 429 })
-      .mockResolvedValueOnce({ ok: true, status: 200 });
-
-    const result = await fetchWithRetry('http://test.com', 3, mockFetch);
-    expect(result.ok).toBe(true);
-    expect(mockFetch).toHaveBeenCalledTimes(3);
-  });
-
-  it('throws after exhausting all retries on 429', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({ ok: false, status: 429 });
-
-    await expect(fetchWithRetry('http://test.com', 3, mockFetch))
-      .rejects.toThrow('Weather service is busy');
-    expect(mockFetch).toHaveBeenCalledTimes(3);
-  });
-
-  it('throws immediately on non-429 error (no retry)', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({ ok: false, status: 500 });
-
-    await expect(fetchWithRetry('http://test.com', 3, mockFetch))
-      .rejects.toThrow('Weather API error: 500');
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('throws on 404 without retrying', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({ ok: false, status: 404 });
-
-    await expect(fetchWithRetry('http://test.com', 3, mockFetch))
-      .rejects.toThrow('Weather API error: 404');
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('respects custom retry count of 5', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({ ok: false, status: 429 });
-
-    await expect(fetchWithRetry('http://test.com', 5, mockFetch))
-      .rejects.toThrow('Weather service is busy');
-    expect(mockFetch).toHaveBeenCalledTimes(5);
-  });
-
-  it('handles retry count of 1 (no retries possible)', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({ ok: false, status: 429 });
-
-    await expect(fetchWithRetry('http://test.com', 1, mockFetch))
-      .rejects.toThrow('Weather service is busy');
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('passes the URL to each fetch call', async () => {
-    const mockFetch = vi.fn()
-      .mockResolvedValueOnce({ ok: false, status: 429 })
-      .mockResolvedValueOnce({ ok: true, status: 200 });
-
-    await fetchWithRetry('http://api.example.com/data', 3, mockFetch);
-    expect(mockFetch).toHaveBeenNthCalledWith(1, 'http://api.example.com/data');
-    expect(mockFetch).toHaveBeenNthCalledWith(2, 'http://api.example.com/data');
-  });
+import {it,expect,vi,afterEach} from 'vitest';
+import {requestForecast} from '../services/forecast-provider';
+import {FORECAST_FIELDS} from '../services/forecast-parser';
+import {clearCache} from '../hooks/useWeatherCache';
+function fixture(){return {timezone:'Asia/Manila',hourly:{time:['2026-10-18T00:00'],...Object.fromEntries(FORECAST_FIELDS.map(field=>[field,[field==='temperature_2m'?27:0]]))}};}
+afterEach(()=>{vi.useRealTimers();vi.unstubAllGlobals();clearCache();});
+it.each([429,503])('production provider retries %s once after real bounded backoff',async(status)=>{
+ vi.useFakeTimers();vi.setSystemTime(new Date('2026-10-17T16:10:00Z'));
+ const fetcher=vi.fn().mockResolvedValueOnce({ok:false,status}).mockResolvedValueOnce({ok:true,json:async()=>fixture()});vi.stubGlobal('fetch',fetcher);
+ const result=requestForecast({lat:13+status/10000,lon:121});
+ await vi.advanceTimersByTimeAsync(499);expect(fetcher).toHaveBeenCalledTimes(1);
+ await vi.advanceTimersByTimeAsync(1);expect((await result).hourly).toHaveLength(1);expect(fetcher).toHaveBeenCalledTimes(2);
 });
-
-describe('fetchCompareWithRetry (CompareRegions for-loop retry)', () => {
-  it('returns response on immediate success', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({ ok: true, status: 200 });
-
-    const result = await fetchCompareWithRetry('http://test.com', mockFetch);
-    expect(result.ok).toBe(true);
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('retries on 429 up to 3 times', async () => {
-    const mockFetch = vi.fn()
-      .mockResolvedValueOnce({ ok: false, status: 429 })
-      .mockResolvedValueOnce({ ok: false, status: 429 })
-      .mockResolvedValueOnce({ ok: true, status: 200 });
-
-    const result = await fetchCompareWithRetry('http://test.com', mockFetch);
-    expect(result.ok).toBe(true);
-    expect(mockFetch).toHaveBeenCalledTimes(3);
-  });
-
-  it('stops retrying on non-429 error (breaks loop)', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({ ok: false, status: 500 });
-
-    const result = await fetchCompareWithRetry('http://test.com', mockFetch);
-    expect(result.ok).toBe(false);
-    expect(result.status).toBe(500);
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('returns last failed 429 response after all retries', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({ ok: false, status: 429 });
-
-    const result = await fetchCompareWithRetry('http://test.com', mockFetch);
-    expect(result.ok).toBe(false);
-    expect(result.status).toBe(429);
-    expect(mockFetch).toHaveBeenCalledTimes(3);
-  });
-
-  it('breaks on success at second attempt', async () => {
-    const mockFetch = vi.fn()
-      .mockResolvedValueOnce({ ok: false, status: 429 })
-      .mockResolvedValueOnce({ ok: true, status: 200 });
-
-    const result = await fetchCompareWithRetry('http://test.com', mockFetch);
-    expect(result.ok).toBe(true);
-    expect(mockFetch).toHaveBeenCalledTimes(2);
-  });
+it('persistent rate limiting stops after two attempts',async()=>{
+ vi.useFakeTimers();const fetcher=vi.fn().mockResolvedValue({ok:false,status:429});vi.stubGlobal('fetch',fetcher);
+ const result=expect(requestForecast({lat:13.51,lon:121})).rejects.toMatchObject({kind:'rate-limit'});
+ await vi.advanceTimersByTimeAsync(500);await result;expect(fetcher).toHaveBeenCalledTimes(2);
+});
+it('nonretryable errors do not loop',async()=>{
+ const fetcher=vi.fn().mockResolvedValue({ok:false,status:404});vi.stubGlobal('fetch',fetcher);
+ await expect(requestForecast({lat:13.52,lon:121})).rejects.toMatchObject({kind:'unavailable'});expect(fetcher).toHaveBeenCalledTimes(1);
+});
+it('a hanging request is aborted within the total request timeout',async()=>{
+ vi.useFakeTimers();vi.stubGlobal('fetch',vi.fn((_url:string,options:{signal:AbortSignal})=>new Promise((_resolve,reject)=>options.signal.addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError'))))));
+ const result=expect(requestForecast({lat:13.53,lon:121})).rejects.toMatchObject({kind:'timeout'});
+ await vi.advanceTimersByTimeAsync(15000);await result;
 });

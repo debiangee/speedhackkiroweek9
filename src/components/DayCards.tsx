@@ -1,3 +1,4 @@
+import { manilaDate } from '../utils/time';
 import { type ReactNode } from 'react';
 import { StormIcon, CloudRainIcon, CloudSunRainIcon, CloudSunIcon, SunIcon } from './Icons';
 import type { DailySummary } from '../hooks/useWeatherData';
@@ -60,10 +61,10 @@ export function DayCards({ daily, selectedDate, onSelectDate }: Props) {
 
   return (
     <div className="day-cards" role="tablist" aria-label="7-day weather forecast">
-      {daily.map((day, i) => {
+      {daily.map((day) => {
         const verdict = getRainVerdict(day.avg_prob);
         const isSelected = day.date === selectedDate;
-        const isToday = i === 0;
+        const isToday = day.date === manilaDate();
         const maxTemp = Math.round(day.max_temp ?? day.avg_temp);
         const minTemp = Math.round(day.min_temp ?? day.avg_temp - 4);
 
@@ -73,6 +74,18 @@ export function DayCards({ daily, selectedDate, onSelectDate }: Props) {
             className={`day-card ${isSelected ? 'selected' : ''} ${isToday ? 'is-today' : ''}`}
             onClick={() => onSelectDate(day.date)}
             role="tab"
+            tabIndex={isSelected ? 0 : -1}
+            id={`forecast-day-${day.date}`}
+            aria-controls="forecast-day-panel"
+            onKeyDown={e => {
+              const directions = ['ArrowLeft','ArrowRight','Home','End'];
+              if (!directions.includes(e.key)) return;
+              e.preventDefault();
+              const index = daily.findIndex(d=>d.date===day.date);
+              const next = e.key === 'Home' ? 0 : e.key === 'End' ? daily.length-1 : (index+(e.key==='ArrowRight'?1:-1)+daily.length)%daily.length;
+              onSelectDate(daily[next].date);
+              e.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
+            }}
             aria-selected={isSelected}
             aria-label={`${isToday ? 'Today, ' : ''}${getWeekday(day.date)} ${getDateLabel(day.date)}: ${verdict.text}, High ${maxTemp}°C, Low ${minTemp}°C, Rain ${day.avg_prob}%`}
           >

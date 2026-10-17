@@ -1,3 +1,4 @@
+import { manilaHour, manilaDate } from '../utils/time';
 import { type ReactNode } from 'react';
 import { StormIcon, CloudRainIcon, CloudSunRainIcon, CloudSunIcon, SunIcon } from './Icons';
 import { getProbabilitySeverity } from '../utils/rain-severity';
@@ -28,7 +29,7 @@ export function HourlyTimeline({ hourly }: Props) {
     return <p className="timeline-loading">No hourly data available</p>;
   }
 
-  const nowHour = new Date().getHours();
+  const nowHour = manilaHour();
 
   return (
     <div className="hourly-timeline" role="group" aria-label="Hourly rain forecast">
@@ -38,7 +39,7 @@ export function HourlyTimeline({ hourly }: Props) {
           return (
             <div
               key={h.hour}
-              className={`hour-slot ${h.hour === nowHour ? 'current' : ''}`}
+              className={`hour-slot ${h.hour === nowHour && h.date === manilaDate() ? 'current' : ''}`}
               role="listitem"
               aria-label={`${getHourLabel(h.hour)}: ${h.precipitation_probability}% rain, ${Math.round(h.temperature)} degrees`}
             >

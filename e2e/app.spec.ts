@@ -45,3 +45,10 @@ for (const width of [320,390,768,1440]) test(`no page overflow at ${width}px`, a
   await page.getByRole('button',{name:'Find mapped facilities — status unverified'}).click();
   await expect(page.getByText(/not verified operational evacuation centers/)).toBeVisible();
 });
+test('forecast tabs support arrow keys and radar failure stays explicit',async({page})=>{
+ await page.goto('/'); await expect(page.locator('.hero-temperature')).toBeVisible();
+ const selected=page.locator('.day-card.selected');await selected.focus();await selected.press('ArrowRight');
+ await expect(page.locator('#forecast-day-panel h3')).toContainText('2026-10-19');
+ await page.getByRole('button',{name:'Rain radar',exact:true}).click();
+ await expect(page.getByText('Could not load radar data. Please try again later.')).toBeVisible();
+});

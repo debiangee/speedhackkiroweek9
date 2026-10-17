@@ -43,7 +43,7 @@ export function scoreDay(activity: Activity, day: DailySummary, dayHourly: Hourl
   score -= day.total_rain * 2;
 
   switch (activity) {
-    case 'beach':
+    case 'beach': {
       // Prefer high temps, low wind
       if (day.max_temp < 28) score -= 15;
       if (day.max_temp >= 32) score += 5;
@@ -53,6 +53,7 @@ export function scoreDay(activity: Activity, day: DailySummary, dayHourly: Hourl
         day.avg_prob < 50 ? 'Some clouds but manageable' : 'High rain risk';
       break;
 
+    }
     case 'hiking':
       // Prefer cooler temps, absolutely no heavy rain
       if (day.max_temp > 34) score -= 10;
@@ -77,7 +78,7 @@ export function scoreDay(activity: Activity, day: DailySummary, dayHourly: Hourl
         day.avg_prob < 50 ? 'Have a backup plan' : 'Consider indoor venue';
       break;
 
-    case 'cycling':
+    case 'cycling': {
       // Wind + rain combo is worst
       const windAvg = dayHourly.length > 0 ? dayHourly.reduce((s, h) => s + h.wind_speed, 0) / dayHourly.length : 0;
       if (windAvg > 25) score -= 25;
@@ -85,6 +86,7 @@ export function scoreDay(activity: Activity, day: DailySummary, dayHourly: Hourl
       reason = day.avg_prob < 25 && windAvg < 20 ? 'Lower forecast rain and wind; roads unverified' :
         day.avg_prob < 50 ? 'Bring rain gear' : 'Higher forecast rain probability';
       break;
+    }
   }
 
   score = Math.max(0, Math.min(100, Math.round(score)));

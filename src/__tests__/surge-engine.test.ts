@@ -1,3 +1,4 @@
+import type { SurgeResult } from '../utils/surge-engine';
 import { describe, it, expect } from 'vitest';
 import {
   computeWeatherFactor,
@@ -181,7 +182,7 @@ describe('findBestWindow', () => {
     const results = Array.from({ length: 24 }, (_, i) => ({
       hour: i,
       score: i >= 2 && i <= 6 ? 15 : 50, // Hours 2-6 are low
-      level: (i >= 2 && i <= 6 ? 'LOW' : 'MODERATE') as any,
+      level: (i >= 2 && i <= 6 ? 'LOW' : 'MODERATE') as SurgeResult['level'],
       weatherFactor: 30, temporalFactor: 30, sustainedBonus: 0, topFactor: 'weather' as const,
     }));
 
@@ -208,7 +209,7 @@ describe('findPeakWindow', () => {
     const results = Array.from({ length: 24 }, (_, i) => ({
       hour: i,
       score: i >= 17 && i <= 19 ? 85 : 20, // Evening peak
-      level: (i >= 17 && i <= 19 ? 'EXTREME' : 'LOW') as any,
+      level: (i >= 17 && i <= 19 ? 'EXTREME' : 'LOW') as SurgeResult['level'],
       weatherFactor: 60, temporalFactor: 60, sustainedBonus: 0, topFactor: 'rush_hour' as const,
     }));
 
@@ -298,7 +299,7 @@ describe('generateRecommendations', () => {
     const results = Array.from({ length: 24 }, (_, i) => ({
       hour: i,
       score: i >= 13 ? 65 : 20,
-      level: (i >= 13 ? 'HIGH' : 'LOW') as any,
+      level: (i >= 13 ? 'HIGH' : 'LOW') as SurgeResult['level'],
       weatherFactor: 40, temporalFactor: 40, sustainedBonus: 0, topFactor: 'weather' as const,
     }));
     const hourly = Array.from({ length: 24 }, (_, i) => makeHourly({}, i));
@@ -312,7 +313,7 @@ describe('generateRecommendations', () => {
     const results = Array.from({ length: 24 }, (_, i) => ({
       hour: i,
       score: i >= 12 && i <= 15 ? 70 : 20,
-      level: (i >= 12 && i <= 15 ? 'HIGH' : 'LOW') as any,
+      level: (i >= 12 && i <= 15 ? 'HIGH' : 'LOW') as SurgeResult['level'],
       weatherFactor: 50, temporalFactor: 50, sustainedBonus: 0, topFactor: 'rush_hour' as const,
     }));
     const hourly = Array.from({ length: 24 }, (_, i) => makeHourly({}, i));
@@ -326,7 +327,7 @@ describe('generateRecommendations', () => {
     const results = Array.from({ length: 24 }, (_, i) => ({
       hour: i,
       score: i % 3 === 0 ? 70 : 10,
-      level: (i % 3 === 0 ? 'HIGH' : 'LOW') as any,
+      level: (i % 3 === 0 ? 'HIGH' : 'LOW') as SurgeResult['level'],
       weatherFactor: 40, temporalFactor: 40, sustainedBonus: 0, topFactor: 'weather' as const,
     }));
     const hourly = Array.from({ length: 24 }, (_, i) => makeHourly({ precipitation_probability: 5 }, i));

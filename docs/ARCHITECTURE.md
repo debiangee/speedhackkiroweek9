@@ -12,7 +12,7 @@ React 18/TypeScript SPA bundled by Vite, hosted as Vercel static files. No first
 
 ## Cache policy
 Forecast: 30 minutes maximum, bounded to 64 entries in memory and persistent storage. Reads identify retrieval time and age. After expiry an outage means unavailable, not a stale recommendation.
-AQI: optional separate 60-minute cache. History/OSM/radar use separate adapters. The detailed legacy assistant schema has a separate 10-minute cache, pending Phase 3 consolidation.
+AQI: optional separate 60-minute cache. History/OSM/radar use separate adapters. The deterministic assistant uses the same validated provider and coordinate cache; no separate weather schema/cache is retained.
 
 The migration service worker clears owned legacy caches and does not intercept requests. Offline shell caching is disabled until revisioned behavior is validated. Already loaded tabs can use fresh local forecast storage; offline navigation may fail. No background warning delivery is promised.
 

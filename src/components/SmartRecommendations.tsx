@@ -15,7 +15,7 @@ interface Recommendation {
   severity: 'safe' | 'caution' | 'warning' | 'danger';
 }
 
-function getUmbrellaRec(hourly: HourlyData[]): Recommendation {
+export function getUmbrellaRec(hourly: HourlyData[]): Recommendation {
   const maxProb = Math.max(...hourly.map((h) => h.precipitation_probability));
   const avgProb = hourly.reduce((s, h) => s + h.precipitation_probability, 0) / hourly.length;
 
@@ -55,11 +55,11 @@ function getUmbrellaRec(hourly: HourlyData[]): Recommendation {
   };
 }
 
-function getFloodRisk(_hourly: HourlyData[]): Recommendation {
+export function getFloodRisk(_hourly: HourlyData[]): Recommendation {
   return { id: 'flood', icon: <DropletIcon size={20} />, title: 'Flood conditions unknown', description: 'Rain forecasts alone cannot establish flood risk. Check PAGASA and local DRRMO/LGU information; never cross floodwater.', severity: 'caution' };
 }
 
-function getMotorcycleConditions(hourly: HourlyData[]): Recommendation {
+export function getMotorcycleConditions(hourly: HourlyData[]): Recommendation {
   const avgProb = hourly.reduce((s, h) => s + h.precipitation_probability, 0) / hourly.length;
   const maxWind = Math.max(...hourly.map((h) => h.wind_speed));
   const maxRain = Math.max(...hourly.map((h) => h.precipitation));
@@ -100,7 +100,7 @@ function getMotorcycleConditions(hourly: HourlyData[]): Recommendation {
   };
 }
 
-function getWindAlert(hourly: HourlyData[]): Recommendation | null {
+export function getWindAlert(hourly: HourlyData[]): Recommendation | null {
   const maxWind = Math.max(...hourly.map((h) => h.wind_speed));
 
   if (maxWind < 30) return null;

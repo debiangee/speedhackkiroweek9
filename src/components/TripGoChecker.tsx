@@ -191,10 +191,7 @@ export function TripGoChecker({ hourly, daily, region }: Props) {
       )}
 
       {destRegion && !isLoading && !error && !verdict && <p role="status">Suitability unavailable: missing critical weather data or no remaining forecast hours.</p>}
-      {/* Verdict display */}
-      {destRegion && !isLoading && !error && verdict && (
-        <>
-          {/* Day selector */}
+      {destRegion && !isLoading && !error && activeDaily.length > 0 && <div>          {/* Day selector */}
           <div className="tgc-days" role="tablist" aria-label="Forecast days">
             {activeDaily.map((d, i) => (
               <button
@@ -211,6 +208,10 @@ export function TripGoChecker({ hourly, daily, region }: Props) {
             ))}
           </div>
 
+</div>}
+      {/* Verdict display */}
+      {destRegion && !isLoading && !error && verdict && (
+        <>
           {/* Verdict banner */}
           <div className={`tgc-verdict tgc-verdict-${verdict.verdict.toLowerCase().replace('-', '')}`}>
             <div className="tgc-verdict-icon">

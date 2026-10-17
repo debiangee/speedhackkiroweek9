@@ -98,7 +98,7 @@ export function StreetView({
         className="streetview-iframe"
         allowFullScreen
         loading="lazy"
-        referrerPolicy="no-referrer-when-downgrade"
+        referrerPolicy="strict-origin-when-cross-origin"
         onLoad={() => setLoading(false)}
         onError={() => {
           setLoading(false);

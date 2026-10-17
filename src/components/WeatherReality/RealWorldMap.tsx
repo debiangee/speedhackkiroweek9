@@ -1,3 +1,4 @@
+import { parseRadar } from '../../services/radar';
 import { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -64,9 +65,9 @@ export function RealWorldMap({
   useEffect(() => {
     async function fetchRadarTimestamp() {
       try {
-        const res = await fetch('https://api.rainviewer.com/public/weather-maps.json');
+        const res = await fetch('https://api.rainviewer.com/public/weather-maps.json', {cache:'no-store',signal:AbortSignal.timeout(12000)});
         if (res.ok) {
-          const data = await res.json();
+          const data = parseRadar(await res.json());
           if (data.radar && data.radar.past && data.radar.past.length > 0) {
             const latest = data.radar.past[data.radar.past.length - 1];
             setRadarPath(latest.path);
@@ -81,6 +82,7 @@ export function RealWorldMap({
 
   return (
     <div className="real-world-map-container">
+      {!radarPath && <p role="status">Radar unavailable or loading; absence of radar is not evidence of no rain.</p>}
       {/* Map Controls */}
       <div className="map-toolbar">
         <div className="map-layer-toggles">

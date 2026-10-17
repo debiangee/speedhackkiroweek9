@@ -179,3 +179,5 @@
 .lang-option { color: white; }
 .app-footer a, .privacy-note a { color: var(--accent); }
 [data-theme="dark"] .detect-btn, [data-theme="dark"] .city-chip.active, [data-theme="dark"] .today-badge { color: #0f1117; }
+
+.offline-notice { padding: 1rem; margin: 1rem; border: 1px solid var(--warning); border-radius: 10px; color: var(--text-primary); background: var(--warning-light); }

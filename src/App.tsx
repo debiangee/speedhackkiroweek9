@@ -1,3 +1,4 @@
+import { useOnlineStatus } from './hooks/useOnlineStatus';
 import './App.css';
 import { useDarkMode } from './hooks/useDarkMode';
 import { useLocale } from './hooks/useLocale';
@@ -9,6 +10,7 @@ import { t } from './utils/i18n';
 import { Analytics } from '@vercel/analytics/react';
 
 function App() {
+  const online = useOnlineStatus();
   const { isDark, toggle } = useDarkMode();
   const { locale, toggle: toggleLocale } = useLocale();
 
@@ -36,6 +38,7 @@ function App() {
           ['preparedness', 'Official Sources', 'Opisyal na sanggunian'], ['kuya-weather', 'Kuya Weather', 'Kuya Weather'],
         ].map(([id, en, fil]) => <a key={id} href={`#${id}`}>{locale === 'fil' ? fil : en}</a>)}
       </nav>
+      {!online && <p className="offline-notice" role="status">{locale === 'fil' ? 'Offline ka. Wastong naka-cache na forecast lang ang maaaring ipakita, hanggang 30 minuto. Kailangan ng koneksiyon para sa mga opisyal na site at mapa.' : 'You are offline. Only loaded or unexpired cached forecasts can appear, for up to 30 minutes. Official sites and maps need a connection.'}</p>}
       <main className="app-main" id="main-content" role="main">
         <Dashboard />
       </main>
@@ -52,11 +55,11 @@ function App() {
       <section className="privacy-note" aria-label={locale === 'fil' ? 'Pagkapribado at mga limitasyon' : 'Privacy and limitations'}>
         <details><summary>{locale === 'fil' ? 'Pagkapribado, datos at mga limitasyon' : 'Privacy, data and limitations'}</summary>
           <p>{locale === 'fil' ? 'Opsyonal ang lokasyon: itinutugma ang GPS sa pinakamalapit na nakatalang lungsod sa iyong device. Lokal na sine-save ang mga kagustuhan. Ipinapadala sa mga provider ang napiling forecast point, hindi ang tanong mo sa assistant.' : 'Location is optional: GPS is matched to a catalog city on your device. Preferences and recent forecasts are stored locally. Providers receive the selected forecast coordinates; assistant questions are processed on your device.'}</p>
-          <p>Open-Meteo supplies forecasts. Maps and imagery contact RainViewer, Google Maps, Esri, CARTO, OpenStreetMap and Overpass only when requested. Vercel Analytics measures usage. Third-party services receive ordinary network metadata under their own policies. No accounts or background notification delivery.</p>
+          <p>Open-Meteo supplies forecasts. Maps and imagery contact RainViewer, Google Maps, Esri, CARTO, OpenStreetMap and Overpass only when requested. Vercel Analytics measures usage with forecast query and fragment context removed from event URLs. Third-party services receive ordinary network metadata under their own policies. No accounts or background notification delivery.</p>
           <p>Offline navigation is not supported. Already loaded forecasts expire after 30 minutes. All planning scores are heuristics; consult PAGASA and local authorities for official warnings and operational information.</p>
         </details>
       </section>
-      <Analytics />
+      <Analytics beforeSend={event => { try { const url = new URL(event.url); url.search = ''; url.hash = ''; return { ...event, url: url.toString() }; } catch { return null; } }} />
     </div>
   );
 }

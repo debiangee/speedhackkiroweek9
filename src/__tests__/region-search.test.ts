@@ -1,64 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { REGIONS } from '../utils/regions';
-import { REGION_CITIES } from '../utils/cities';
 
-// Extract the pure search function from RegionSearch component
-interface SearchResult {
-  type: 'region' | 'city';
-  regionId: string;
-  cityName?: string;
-  label: string;
-  sublabel: string;
-}
-
-function buildSearchResults(query: string): SearchResult[] {
-  const q = query.toLowerCase().trim();
-  if (!q) {
-    return REGIONS.map((r) => ({
-      type: 'region' as const,
-      regionId: r.id,
-      label: r.number,
-      sublabel: r.label,
-    }));
-  }
-
-  const results: SearchResult[] = [];
-
-  // Search regions loop
-  for (const r of REGIONS) {
-    if (
-      r.id.toLowerCase().includes(q) ||
-      r.label.toLowerCase().includes(q) ||
-      r.number.toLowerCase().includes(q) ||
-      r.keywords.includes(q)
-    ) {
-      results.push({
-        type: 'region',
-        regionId: r.id,
-        label: r.number,
-        sublabel: r.label,
-      });
-    }
-  }
-
-  // Search cities loop
-  for (const [regionId, cities] of Object.entries(REGION_CITIES)) {
-    for (const city of cities) {
-      if (city.name.toLowerCase().includes(q)) {
-        const regionInfo = REGIONS.find((r) => r.id === regionId);
-        results.push({
-          type: 'city',
-          regionId,
-          cityName: city.name,
-          label: city.name,
-          sublabel: regionInfo ? `${regionInfo.number} - ${regionId}` : regionId,
-        });
-      }
-    }
-  }
-
-  return results.slice(0, 20);
-}
+import { buildSearchResults } from '../components/RegionSearch';
 
 describe('buildSearchResults (nested loop search)', () => {
   it('returns all regions when query is empty', () => {

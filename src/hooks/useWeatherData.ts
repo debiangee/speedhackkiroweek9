@@ -41,5 +41,5 @@ export function useWeatherData(region: string, cityCoords?: { lat: number; lon: 
     load();
     return () => { ++generation.current; controller.abort(); };
   }, [lat, lon, identity, revision]);
-  return { ...(state.identity === identity ? state : empty), refetch };
+  return { ...(state.identity === identity && (!state.metadata || Date.now() - state.metadata.retrievedAt < 1800000) ? state : empty), refetch };
 }

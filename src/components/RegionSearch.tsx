@@ -18,7 +18,7 @@ interface SearchResult {
   sublabel: string;
 }
 
-function buildSearchResults(query: string): SearchResult[] {
+export function buildSearchResults(query: string): SearchResult[] {
   const q = query.toLowerCase().trim();
   if (!q) {
     // Show all regions when no query

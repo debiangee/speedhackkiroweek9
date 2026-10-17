@@ -209,14 +209,14 @@ export function calculateSolarPhase(hour: number, minute = 0): {
   const timeFraction = (hour + minute / 60) / 24; // 0 to 1
 
   let phase: 'morning' | 'midday' | 'afternoon' | 'sunset' | 'night';
-  let altitude = 0;
-  let azimuth = 0;
-  let baseAmbient = 0.2;
-  let baseSun = 0.0;
-  let skyColor = '#060a14';
-  let ambientColor = '#1a2238';
-  let sunColor = '#ffffff';
-  let streetlightsOn = true;
+  let altitude: number;
+  let azimuth: number;
+  let baseAmbient: number;
+  let baseSun: number;
+  let skyColor: string;
+  let ambientColor: string;
+  let sunColor: string;
+  let streetlightsOn: boolean;
 
   if (timeFraction >= 0.24 && timeFraction < 0.30) {
     // 05:45 - 07:15: Dawn / Sunrise

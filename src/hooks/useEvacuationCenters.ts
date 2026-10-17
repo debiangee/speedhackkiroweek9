@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getCached, setCache } from '../hooks/useWeatherCache';
 
+interface OsmElement { id: number; lat?: number; lon?: number; center?: {lat:number;lon:number}; tags?: Record<string,string> }
 export interface EvacuationCenter {
   id: number;
   name: string;
@@ -120,19 +121,20 @@ export function useEvacuationCenters(lat: number | null, lon: number | null) {
         }
 
         const json = await response.json();
+        if (!Array.isArray(json.elements)) throw new Error('Invalid mapped-facility response');
 
         const centers: EvacuationCenter[] = (json.elements || [])
-          .map((el: any) => {
+          .map((el: OsmElement) => {
             const elLat = el.lat ?? el.center?.lat;
             const elLon = el.lon ?? el.center?.lon;
-            if (elLat == null || elLon == null) return null;
+            if (elLat == null || elLon == null || !Number.isFinite(elLat) || !Number.isFinite(elLon) || Math.abs(elLat) > 90 || Math.abs(elLon) > 180 || !Number.isFinite(el.id)) return null;
 
             const tags: Record<string, string> = el.tags || {};
             const distance = haversineDistance(latitude, longitude, elLat, elLon);
 
             return {
               id: el.id,
-              name: tags.name || tags['name:en'] || 'Unnamed Facility',
+              name: typeof tags.name === 'string' ? tags.name : typeof tags['name:en'] === 'string' ? tags['name:en'] : 'Unnamed facility',
               type: resolveType(tags),
               lat: elLat,
               lon: elLon,
@@ -157,12 +159,12 @@ export function useEvacuationCenters(lat: number | null, lon: number | null) {
           centers: limited,
           searchRadius: SEARCH_RADIUS_KM,
         });
-      } catch (err: any) {
-        if (err.name === 'AbortError') return;
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === 'AbortError') return;
         setState((prev) => ({
           ...prev,
           loading: false,
-          error: err.message || 'Failed to fetch evacuation centers',
+          error: err instanceof Error ? err.message : 'Failed to fetch mapped facilities',
         }));
       }
     },

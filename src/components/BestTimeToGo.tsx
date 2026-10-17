@@ -1,3 +1,4 @@
+import { findBestAndWorstWindows, formatWindow } from '../utils/best-time';
 import { CheckCircleIcon, CloudRainIcon, SunIcon } from './Icons';
 import { remainingForecast } from '../utils/time';
 import type { HourlyData } from '../hooks/useWeatherData';
@@ -7,41 +8,11 @@ interface Props {
   hourly: HourlyData[];
 }
 
-function getHourLabel(hour: number): string {
-  if (hour === 0) return '12 AM';
-  if (hour === 12) return '12 PM';
-  if (hour < 12) return `${hour} AM`;
-  return `${hour - 12} PM`;
-}
-
-function formatWindow(start: number, end: number): string {
-  return `${getHourLabel(start)} - ${getHourLabel(end > 23 ? 23 : end)}`;
-}
-
 export function BestTimeToGo({ hourly }: Props) {
   hourly = remainingForecast(hourly);
-  if (hourly.length < 3) return null;
-
-  let bestStart = 0;
-  let bestAvg = 100;
-  let worstStart = 0;
-  let worstAvg = 0;
-
-  for (let i = 0; i <= hourly.length - 3; i++) {
-    const windowAvg = (
-      hourly[i].precipitation_probability +
-      hourly[i + 1].precipitation_probability +
-      hourly[i + 2].precipitation_probability
-    ) / 3;
-    if (windowAvg < bestAvg) {
-      bestAvg = windowAvg;
-      bestStart = hourly[i].hour;
-    }
-    if (windowAvg > worstAvg) {
-      worstAvg = windowAvg;
-      worstStart = hourly[i].hour;
-    }
-  }
+  const result = findBestAndWorstWindows(hourly);
+  if (!result) return null;
+  const { bestStart, bestAvg, worstStart, worstAvg } = result;
 
   return (
     <div className="best-time">
