@@ -28,4 +28,4 @@ try {
 } finally {await browser.close();}
 const median=values=>[...values].sort((a,b)=>a-b)[Math.floor(values.length/2)];
 const report={scope:'Local production build, deterministic weather fixtures, not Lighthouse or production telemetry',viewport:'390x844',cpuSlowdown:4,network:{latencyMs:150,downloadBytesPerSecond:200000,uploadBytesPerSecond:75000},samples,median:{fcpMs:median(samples.map(s=>s.fcpMs)),lcpMs:median(samples.map(s=>s.lcpMs)),cls:median(samples.map(s=>s.cls))}};
-await mkdir('test-results',{recursive:true});await writeFile('test-results/mobile-performance.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2));
+await mkdir('performance-results',{recursive:true});await writeFile('performance-results/mobile-performance.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2));

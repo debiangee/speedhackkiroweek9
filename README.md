@@ -1,112 +1,89 @@
-# Weather Lang — Philippine Weather Decision Companion
+# Team Weather Lang — Your PH Weather Companion
 
-A real-time Philippine weather decision-support dashboard that empowers Filipinos to plan travel, evaluate daily commutes, monitor flood risks, locate evacuation shelters, prepare for typhoons, and experience real-world street conditions with confidence.
+A Philippine weather and daily-planning companion built incrementally on React 18 and TypeScript. Forecasts help users understand weather context; they do not verify road safety, flooding, evacuation operations or transport prices.
 
-**Live Application:** [https://kiroverse-hack-sprint-shipaton-edition.vercel.app/](https://kiroverse-hack-sprint-shipaton-edition.vercel.app/)
+The public deployment is https://kiroverse-hack-sprint-shipaton-edition.vercel.app/. Local modernization commits are not automatically deployed.
 
----
+## What works
 
-## Key Features & Capabilities
+- Forecast-first overview: representative location, current-hour **model forecast**, rain probability, hourly precipitation, wind/gusts, humidity, validity and retrieval time.
+- Seven-day and hourly exploration, keyboard day selection, optional weekly chart and previous-year comparison.
+- City/region catalog search with keyboard interaction, explicit geolocation consent and bounded coverage.
+- Trip destination/day/departure windows, explained heuristic suitability and critical-hazard overrides.
+- Activity ranking from remaining forecast hours and optional rule-based optimization.
+- On-demand RainViewer radar, forecast heatmap, region explorer and Weather Reality imagery/simulation.
+- Deterministic Kuya Weather guide with catalog-city context, forecasts, comparisons, unknown-question handling and explicit provider errors. No generative AI service.
+- Saved cities/regions, migration of legacy region favorites, share URLs, theme/language preferences and lightweight mode.
+- PAGASA official-source directory, static emergency numbers and explicitly unverified OSM facility candidates.
 
-### 1. 🌟 Weather Reality — Real-World Street Experience
-*“See the real place. Understand the real weather.”*
-- **Real Street-Level Panoramas** — Interactive 360° Google Street View embeds across major Philippine thoroughfares, historical districts, and urban centers (e.g. *Rizal Park / Luneta*, *Calle Crisologo*, *Session Road*, *Fuente Osmeña*, *Ayala Avenue*, *BGC High Street*, *People's Park*).
-- **Interactive 360° Pan & Tilt Controls** — Directional look controls (`↺ 45°`, `45° ↻`, `▲ Up`, `▼ Down`, `Compass Heading`) and native drag-to-look camera rotation.
-- **Iconic Landmark Spotlights** — Quick-switch chips to jump between iconic street perspectives within any Philippine city or region.
-- **Strict Meteorological Simulation Overlay** — Dynamic HTML5 Canvas overlay for wind-angled rain streaks and thunderstorm lightning flashes that activates **ONLY** when real precipitation is reported (`NO RAIN DATA = NO RAIN VISUALIZATION`). Sunny and cloudy weather remain completely clear.
-- **24-Hour Forecast Timeline Scrubber** — Time-travel across hourly forecasts to preview changing weather conditions at the real location.
-- **Geographic Satellite Map View** — Interactive Leaflet map with high-resolution Esri World Satellite imagery, OpenStreetMap tiles, and live RainViewer precipitation radar.
-- **Split & Fullscreen Modes** — View Street View and Satellite Map side-by-side or expand to a full-screen immersion.
-- **Transparent Technical Disclosures** — Explicit labeling distinguishing real street imagery (captured by provider), live meteorological observations (Open-Meteo), and visual simulation layers.
+English/Filipino support covers primary navigation, overview and selected controls. Detailed tools retain English/Taglish, disclosed in the UI. Automated accessibility checks cover tested states; complete WCAG certification is not claimed.
 
-### 2. Safety & Disaster Preparedness
-- **PAGASA TCWS Warnings & Rainfall Advisories** — Real-time Tropical Cyclone Wind Signals (Signal 1 to 5) and Color-Coded Rainfall warnings (Yellow, Orange, Red) mapped directly to regional coordinates.
-- **Evacuation Center Locator** — Live nearby shelter finder querying OpenStreetMap Overpass API within search radiuses, showing distances and one-tap Google Maps directions.
-- **Emergency Hotlines** — Regional Office of Civil Defense (OCD) numbers and national 911 / NDRRMC / Red Cross emergency hotlines with tap-to-call support.
-- **Weather Alerts & Typhoon Banner** — High-visibility alerts for extreme heat indices, heavy rainfall, high wind gusts, and seasonal storm advisories.
+## Data integrity and limits
 
-### 3. Intelligent Decision-Support Tools
-- **Kuya Weather Assistant** — Natural-language Taglish meteorological advisor capable of parsing intent for current weather, 7-day forecasts, flood risk modeling, heat index dangers, travel safety, and multi-region comparisons with one-click *"Experience This Weather"* actions.
-- **Trip Go / No-Go Checker** — Weighted rule-engine evaluating wind, rain probability, visibility, and road hazards to provide a clear GO, CAUTION, or NO-GO travel verdict.
-- **Transport Surge Predictor** — Weather-driven surge multiplier forecasting for Grab, Angkas, Jeepneys, and walking routes with optimal departure timing.
-- **Smart Optimization Panel & Activity Planner** — Multi-criteria decision engine for running, hiking, beach trips, laundry, and commuting.
+Open-Meteo hourly forecasts are validated before entering recommendation engines. Missing critical variables, invalid units/times or failed requests produce unavailable states, never invented favorable weather. Daily percentages are arithmetic means of hourly probabilities, not the probability of any rain during a whole day.
 
-### 4. Meteorological Analytics & Visualization
-- **Live Rain Radar (RainViewer)** — Real-time animated precipitation radar over the Philippine archipelago locked to national bounds.
-- **7-Day Forecast & Hourly Timeline** — Interactive temperature, precipitation probability, humidity, and wind trend charts built with Recharts.
-- **Historical Comparison** — Comparative analysis of current temperatures and rainfall against historical 10-year meteorological baselines (Open-Meteo Archive API).
-- **Side-by-Side Region Comparison** — Multi-region weather differential analyzer across all 17 administrative regions.
+Forecasts are cached for at most 30 minutes, with visible retrieval/age information. Expired forecasts are not used. Model issue time is not fabricated. Coordinates are representative points, not street-level forecast precision. Geolocation matches GPS to a catalog city on-device.
 
-### 5. Accessibility & Quality of Life
-- **Clean SVG Iconography** — Professional, accessible SVG icons replacing ambiguous emojis across all widgets.
-- **Light & Dark Theme** — Comprehensive color system with high-contrast mode and system preference auto-detection.
-- **Instant City Search & Geolocation** — Quick switcher covering 50+ Philippine cities and automated GPS location detection.
-- **Forecast Sharing & Favorites** — Quick clipboard/native share sheet and persistent saved region management via localStorage.
+There is **no official advisory ingestion**. TCWS/rainfall warnings, issue times and expiry windows are not synthesized. Consult PAGASA and local authorities directly. Facility operational status, capacity, opening and accessibility are unverified. Transport scores are heuristics, not actual fares/traffic/driver availability. Street imagery may be historical; overlays are simulations using a forecast for the displayed point.
 
----
+The migration service worker removes owned legacy caches and does not intercept requests. Offline navigation and background notifications are not supported. Already loaded tabs can use a still-valid cached forecast and show offline messaging. No authentication, database, payments or push-delivery infrastructure is introduced.
 
-## Technical Architecture
+## Local development
 
-| Layer | Technology | Description |
-|-------|-----------|-------------|
-| **Frontend Framework** | React 18 + TypeScript | Component-driven reactive UI architecture |
-| **Build Tool** | Vite | Lightning-fast HMR and optimized production bundling |
-| **Street-Level Imagery** | Google Street View Embed | 360° panoramic real-world street imagery with pan/tilt navigation |
-| **Geographic Mapping** | Leaflet + Esri Satellite | Responsive map views & live RainViewer radar overlays |
-| **Data Visualizations** | Recharts | Interactive time-series forecast charts |
-| **Live Weather API** | [Open-Meteo](https://open-meteo.com/) | Live 7-day hourly & daily forecasting |
-| **Air Quality & Archive** | Open-Meteo AQI & Archive | Real-time AQI metrics & 10-year historical weather patterns |
-| **Radar Imagery** | [RainViewer API](https://www.rainviewer.com/api.html) | Live radar composite animation over the Philippines |
-| **Geospatial Shelters** | OpenStreetMap Overpass API | Real-time querying of civic shelters and assembly points |
-| **Caching Layer** | Browser `localStorage` | TTL-based caching (30m forecast, 60m AQI/evacuation) with fallback |
-| **Deployment** | Vercel | Global edge CDN deployment |
+Canonical repository: `/Users/Macbook/Desktop/Kirovers-Hack-Sprint-Shipaton-Edition`.
+The nested `kiro-verse-hack-sprint-shipaton-edition/` is a separate repository and must not be used as this application's root.
 
----
+Requirements: Node `^24.15.0` or `>=26`, npm 11+. `.nvmrc` records the tested Node 24.18.0 runtime.
 
-## Getting Started
-
-### Prerequisites
-- Node.js 18+
-- npm 9+
-
-### Installation & Development
-
-```bash
-# Clone the repository
-git clone https://github.com/rolex-esto/Kirovers-Hack-Sprint-Shipaton-Edition.git
-cd Kirovers-Hack-Sprint-Shipaton-Edition
-
-# Install dependencies
-npm install
-
-# Start Vite local development server
+```sh
+nvm use
+npm ci
 npm run dev
-
-# Run unit tests (Vitest)
-npm test
-
-# Build for production
-npm run build
 ```
 
----
+No environment variable is required for the core forecast. Optional `VITE_GOOGLE_MAPS_API_KEY` enables the official Street View embed URL. This is a client-visible browser key and must be origin/API restricted by the owner. Never put privileged credentials in `VITE_*` variables. No key value belongs in source control.
 
-## Covered Philippine Regions & Cities
+## Validation
 
-All 17 administrative regions and major urban hubs are fully indexed:
+```sh
+npm run lint
+npm run typecheck
+npm test
+npm run build
+npx playwright install chromium
+npm run test:e2e
+# Complete local gate:
+npm run check
+npm audit
+npm audit --omit=dev
+```
 
-- **Luzon:** National Capital Region (NCR), Cordillera Administrative Region (CAR), Ilocos (Region I), Cagayan Valley (Region II), Central Luzon (Region III), CALABARZON (Region IV-A), MIMAROPA (Region IV-B), Bicol (Region V).
-- **Visayas:** Western Visayas (Region VI), Central Visayas (Region VII), Eastern Visayas (Region VIII).
-- **Mindanao:** Zamboanga Peninsula (Region IX), Northern Mindanao (Region X), Davao (Region XI), SOCCSKSARGEN (Region XII), Caraga (Region XIII), Bangsamoro (BARMM).
+Playwright uses deterministic provider fixtures, Desktop Chrome and Pixel 5 emulation. It starts a local production preview on port 4173; build first. Browser tests cover normal/unavailable data, keyboard search/day selection, representative viewports, core light/dark axe checks, saved/shareable context, blocked storage, trip windows, assistant, Reality keyboard controls, offline expiry and service-worker migration. Tests do not certify live imagery or emergency operations.
 
----
+For local performance measurement, start a production preview on port 4174, then run the script in another terminal:
 
-## License
+```sh
+npm run preview -- --host 127.0.0.1 --port 4174
+npm run perf:local
+```
 
-MIT License. Developed for Filipino resilience and community safety.
+`WEATHER_PERF_URL` can select another local preview URL. Output goes to ignored `performance-results/mobile-performance.json`; see [performance method and results](docs/PERFORMANCE.md). It is not Lighthouse or production telemetry.
 
----
+## Architecture and documentation
 
-## Author
+- [Architecture and cache policy](docs/ARCHITECTURE.md)
+- [Design and accessibility foundations](docs/DESIGN_SYSTEM.md)
+- [Feature inventory](docs/FEATURES.md)
+- [Provider capabilities and deferred integrations](docs/INTEGRATIONS.md)
+- [Security and privacy](docs/SECURITY_PRIVACY.md)
+- [Executed local validation](docs/VALIDATION.md)
+- [Release validation and rollback](docs/RELEASE_CHECKLIST.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
 
-**Gee Espiritu** ([@debiangee](https://github.com/debiangee))
+Vite builds static `dist/` assets. Vercel's build runs type checking and bundling; catch-all rewriting serves the SPA. No server/API route is shipped. CSP is report-only pending owner validation of real third-party integrations.
+
+`pipeline/generate-data.ts` is dormant synthetic July 2026 data-generation material, not a live backend. Its undeclared DuckDB dependency was not added and its broken npm command was retired. Do not use generated synthetic data as a weather source.
+
+## License and existing credits
+
+The original project README identifies the license as MIT and credits **Gee Espiritu** ([@debiangee](https://github.com/debiangee)). This modernization does not change those existing credits.

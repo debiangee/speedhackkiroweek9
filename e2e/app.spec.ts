@@ -6,6 +6,8 @@ test('forecast-first overview, official sources and deferred maps', async ({page
   const calls: string[] = []; page.on('request', r => calls.push(r.url()));
   await page.goto('/');
   await expect(page.locator('.hero-temperature')).toHaveText('27°C');
+  const temperatureBox=await page.locator('.hero-temperature').boundingBox();
+  expect(temperatureBox!.y+temperatureBox!.height).toBeLessThanOrEqual(page.viewportSize()!.height);
   await expect(page.locator('.conditions-primary')).toContainText('2026-10-18 · 12:00 PHT');
   await expect(page.locator('.conditions-primary')).toContainText('NOT AN OBSERVATION');
   await expect(page.locator('.freshness')).toContainText('Open-Meteo');
@@ -30,7 +32,7 @@ test('theme and Filipino affect core content and navigation', async ({page}) => 
   await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
   await page.getByRole('button',{name:'Switch to Filipino'}).click();
   await expect(page.locator('html')).toHaveAttribute('lang','fil');
-  await expect(page.getByRole('heading',{name:'Mas malinaw na plano sa araw mo.'})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'Lokal na forecast'})).toBeVisible();
   await expect(page.getByRole('navigation',{name:'Pangunahing nabigasyon'}).getByRole('link',{name:'Taya ng panahon'})).toBeVisible();
 });
 test('provider outage exposes no invented current forecast and keeps official resources', async ({page}) => {

@@ -6,11 +6,11 @@ Three cold-context samples:
 
 | Run | FCP | LCP | CLS | Initial JS transfer |
 |---|---:|---:|---:|---:|
-| 1 | 1420 ms | 1420 ms | 0 | 84,346 bytes |
-| 2 | 1020 ms | 1020 ms | 0 | 84,346 bytes |
-| 3 | 1028 ms | 1028 ms | 0 | 84,346 bytes |
+| 1 | 1432 ms | 1432 ms | 0.00324 | 84,360 bytes |
+| 2 | 1036 ms | 1036 ms | 0.00324 | 84,360 bytes |
+| 3 | 1056 ms | 1056 ms | 0.00324 | 84,360 bytes |
 
-Median local FCP/LCP: 1028ms. No Leaflet, Recharts or Weather Reality chunks loaded initially. Raw output is a local ignored artifact: test-results/mobile-performance.json.
+Median local FCP/LCP: 1056ms; CLS approximately 0.00324. No Leaflet, Recharts or Weather Reality chunks loaded initially. Raw output is a local ignored artifact: performance-results/mobile-performance.json.
 
 These are not Lighthouse scores, real-device results, upstream-provider latency, Vercel telemetry or production Core Web Vitals. No baseline LCP was measured, so no LCP improvement percentage is claimed. Initial timing attempt used a fixture clock, which suppressed navigation timing; that attempt failed and was replaced with unmodified browser timing.
 
