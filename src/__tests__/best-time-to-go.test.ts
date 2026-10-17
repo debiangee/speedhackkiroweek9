@@ -1,49 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { HourlyData } from '../hooks/useWeatherData';
 
-// Extract the pure logic from BestTimeToGo for testing
-function getHourLabel(hour: number): string {
-  if (hour === 0) return '12 AM';
-  if (hour === 12) return '12 PM';
-  if (hour < 12) return `${hour} AM`;
-  return `${hour - 12} PM`;
-}
-
-function formatWindow(start: number, end: number): string {
-  return `${getHourLabel(start)} - ${getHourLabel(end > 23 ? 23 : end)}`;
-}
-
-function findBestAndWorstWindows(hourly: HourlyData[]): {
-  bestStart: number;
-  bestAvg: number;
-  worstStart: number;
-  worstAvg: number;
-} | null {
-  if (hourly.length < 3) return null;
-
-  let bestStart = 0;
-  let bestAvg = 100;
-  let worstStart = 0;
-  let worstAvg = 0;
-
-  for (let i = 0; i <= hourly.length - 3; i++) {
-    const windowAvg = (
-      hourly[i].precipitation_probability +
-      hourly[i + 1].precipitation_probability +
-      hourly[i + 2].precipitation_probability
-    ) / 3;
-    if (windowAvg < bestAvg) {
-      bestAvg = windowAvg;
-      bestStart = hourly[i].hour;
-    }
-    if (windowAvg > worstAvg) {
-      worstAvg = windowAvg;
-      worstStart = hourly[i].hour;
-    }
-  }
-
-  return { bestStart, bestAvg, worstStart, worstAvg };
-}
+import { getHourLabel, formatWindow, findBestAndWorstWindows } from '../utils/best-time';
 
 function makeHourly(probs: number[]): HourlyData[] {
   return probs.map((prob, i) => ({

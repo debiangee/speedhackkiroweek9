@@ -33,45 +33,54 @@ export function WeekSummaryCard({ daily, region: _region }: WeekSummaryCardProps
 
       <div className="week-summary-stats">
         <div className="week-stat">
-          <DropletIcon size={16} color="var(--accent)" />
+          <div className="week-stat-icon" aria-hidden="true">
+            <DropletIcon size={16} color="var(--accent)" />
+          </div>
           <div>
-            <span className="stat-value">{totalRain.toFixed(1)}mm</span>
-            <span className="stat-label">Total rain</span>
+            <span className="stat-value">{totalRain.toFixed(1)} mm</span>
+            <span className="stat-label">Expected 7-day rainfall</span>
           </div>
         </div>
         <div className="week-stat">
-          <ThermometerIcon size={16} color="var(--accent)" />
+          <div className="week-stat-icon" aria-hidden="true">
+            <ThermometerIcon size={16} color="var(--accent)" />
+          </div>
           <div>
             <span className="stat-value">{avgTemp}°C</span>
-            <span className="stat-label">Avg temp</span>
+            <span className="stat-label">Average daytime temp</span>
           </div>
         </div>
         <div className="week-stat">
-          <SunIcon size={16} color="#f59e0b" />
+          <div className="week-stat-icon" aria-hidden="true">
+            <SunIcon size={16} color="#f59e0b" />
+          </div>
           <div>
             <span className="stat-value">{bestDayLabel}</span>
-            <span className="stat-label">Driest day</span>
+            <span className="stat-label">Driest day (Best for plans)</span>
           </div>
         </div>
         <div className="week-stat">
-          <DropletIcon size={16} color="#dc2626" />
+          <div className="week-stat-icon" aria-hidden="true">
+            <DropletIcon size={16} color="#dc2626" />
+          </div>
           <div>
             <span className="stat-value">{worstDayLabel}</span>
-            <span className="stat-label">Wettest day</span>
+            <span className="stat-label">Wettest day (Pack umbrella)</span>
           </div>
         </div>
       </div>
 
-      <div className="week-mini-bars">
+      <div className="week-mini-bars" aria-label="Daily precipitation probability breakdown">
         {daily.map((d) => {
-          const dayName = new Date(d.date + 'T00:00:00').toLocaleDateString('en-PH', { weekday: 'short' });
+          const dayName = new Date(d.date + 'T00:00:00').toLocaleDateString('en-PH', { weekday: 'short' }).toUpperCase();
           return (
             <div key={d.date} className="mini-bar-col">
+              <span className="mini-bar-prob">{d.avg_prob}%</span>
               <div className="mini-bar-track">
                 <div
                   className="mini-bar-fill"
                   style={{ height: `${Math.min(d.avg_prob, 100)}%` }}
-                  title={`${d.avg_prob}% rain probability`}
+                  title={`${d.avg_prob}% rain probability on ${dayName}`}
                 />
               </div>
               <span className="mini-bar-label">{dayName}</span>

@@ -30,3 +30,6 @@ test-results/
 playwright-report/
 
 .vercel
+
+# Local performance evidence (not cleared by browser tests)
+performance-results/

@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { REGION_CITIES } from '../utils/cities';
 
 // Haversine formula to find distance between two points
-function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+export function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
@@ -14,7 +14,8 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 }
 
 // Find the nearest region AND city from GPS coordinates
-function findNearestLocation(lat: number, lon: number): { region: string; city: string } {
+export function findNearestLocation(lat: number, lon: number): { region: string; city: string } | null {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < 4.5 || lat > 21.5 || lon < 116.5 || lon > 127.5) return null;
   let nearestRegion = 'NCR';
   let nearestCity = 'Manila';
   let minDist = Infinity;
@@ -30,7 +31,7 @@ function findNearestLocation(lat: number, lon: number): { region: string; city: 
     }
   }
 
-  return { region: nearestRegion, city: nearestCity };
+  return minDist <= 200 ? { region: nearestRegion, city: nearestCity } : null;
 }
 
 interface GeolocationResult {
@@ -64,7 +65,7 @@ export function useGeolocation() {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const result = findNearestLocation(position.coords.latitude, position.coords.longitude);
-          setState({ detecting: false, error: null, detected: result });
+          setState({ detecting: false, error: result ? null : 'Outside supported city coverage. Search for a Philippine location manually.', detected: result });
           resolve(result);
         },
         (err) => {

@@ -1,5 +1,10 @@
+import { resolveLocation } from '../utils/locations';
+import { readPreference, writePreference } from '../utils/storage';
+import { useLocale } from '../hooks/useLocale';
+import { useClock } from '../hooks/useClock';
 import { useState, useEffect, useMemo } from 'react';
 import { useWeatherData } from '../hooks/useWeatherData';
+import { remainingForecast } from '../utils/time';
 import { REGIONS } from '../utils/regions';
 import { getCitiesForRegion, getCityCoords } from '../utils/cities';
 import { computeVerdict, findTravelWindows, getTripAdvice } from '../utils/trip-verdict';
@@ -31,39 +36,37 @@ function getDayDate(dateStr: string): string {
 }
 
 export function TripGoChecker({ hourly, daily, region }: Props) {
+  const now = useClock();
+  const { locale } = useLocale();
+  const text = (en: string, fil: string) => locale === 'fil' ? fil : en;
+  const [departure, setDeparture] = useState('remaining');
   // Destination state (independent from dashboard region)
   const [destRegion, setDestRegion] = useState<string>(() => {
-    return sessionStorage.getItem('trip-dest-region') || '';
+    const stored = readPreference('trip-dest-region', true) || '';
+    return resolveLocation(stored) ? stored : '';
   });
   const [destCity, setDestCity] = useState<string | null>(() => {
-    return sessionStorage.getItem('trip-dest-city') || null;
+    const city = readPreference('trip-dest-city', true);
+    return resolveLocation(readPreference('trip-dest-region', true) || '', city) ? city : null;
   });
   const [selectedDay, setSelectedDay] = useState(0);
 
-  // Reset destination when dashboard region changes
-  useEffect(() => {
-    setDestRegion('');
-    setDestCity(null);
-    sessionStorage.removeItem('trip-dest-region');
-    sessionStorage.removeItem('trip-dest-city');
-  }, [region]);
-
   // Persist selections
   useEffect(() => {
-    if (destRegion) sessionStorage.setItem('trip-dest-region', destRegion);
-    else sessionStorage.removeItem('trip-dest-region');
+    if (destRegion) writePreference('trip-dest-region', destRegion, true);
+    else writePreference('trip-dest-region', null, true);
   }, [destRegion]);
 
   useEffect(() => {
-    if (destCity) sessionStorage.setItem('trip-dest-city', destCity);
-    else sessionStorage.removeItem('trip-dest-city');
+    if (destCity) writePreference('trip-dest-city', destCity, true);
+    else writePreference('trip-dest-city', null, true);
   }, [destCity]);
 
   // Fetch weather for destination (or use parent data if no destination selected)
   const cityCoords = useMemo(() => {
     return destCity && destRegion ? getCityCoords(destRegion, destCity) : null;
   }, [destCity, destRegion]);
-  const useDestData = destRegion !== '' && destRegion !== region;
+  const useDestData = destRegion !== ''; // City identity matters even within the dashboard region.
 
   const {
     hourly: destHourly,
@@ -71,7 +74,7 @@ export function TripGoChecker({ hourly, daily, region }: Props) {
     loading: destLoading,
     error: destError,
     refetch: destRefetch,
-  } = useWeatherData(useDestData ? destRegion : region, useDestData ? cityCoords : undefined);
+  } = useWeatherData(destRegion, cityCoords);
 
   // Determine which data to use
   const activeHourly = useDestData ? destHourly : hourly;
@@ -82,13 +85,13 @@ export function TripGoChecker({ hourly, daily, region }: Props) {
   // Cities for selected destination region
   const cities = destRegion ? getCitiesForRegion(destRegion) : [];
 
-  // Get hourly data for selected day
+  const dayDate = activeDaily[selectedDay]?.date;
+  const availableHours = useMemo(() => remainingForecast(activeHourly.filter(h => h.date === dayDate), now), [activeHourly, dayDate, now]);
   const dayHourly = useMemo(() => {
-    if (activeDaily.length === 0) return activeHourly.slice(0, 24);
-    const dayDate = activeDaily[selectedDay]?.date;
-    if (!dayDate) return [];
-    return activeHourly.filter((h) => h.date === dayDate);
-  }, [activeHourly, activeDaily, selectedDay]);
+    if (departure === 'remaining') return availableHours;
+    const start = availableHours.findIndex(h => h.time === departure);
+    return start < 0 ? [] : availableHours.slice(start, start + 3);
+  }, [availableHours, departure]);
 
   // Compute verdict
   const verdict: VerdictResult | null = useMemo(() => computeVerdict(dayHourly), [dayHourly]);
@@ -115,6 +118,7 @@ export function TripGoChecker({ hourly, daily, region }: Props) {
     setDestRegion(e.target.value);
     setDestCity(null);
     setSelectedDay(0);
+    setDeparture('remaining');
   };
 
   const handleCityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -123,10 +127,12 @@ export function TripGoChecker({ hourly, daily, region }: Props) {
 
   return (
     <div className="trip-go-checker">
+      <p>{text('Origin context','Pinagmulan')}: {region}. {text('Guidance evaluates destination weather only; routes are not assessed.','Panahon sa destinasyon lang ang sinusuri; hindi ang ruta.')}</p>
+      <p>Forecast-based suitability only. No road, flood, traffic or operational transport conditions are verified. Unknown weather produces no verdict.</p>
       {/* Destination selector */}
       <div className="tgc-destination">
         <div className="tgc-select-group">
-          <label className="tgc-label" htmlFor="tgc-region">Where are you going?</label>
+          <label className="tgc-label" htmlFor="tgc-region">{text('Where are you going?','Saan ang biyahe?')}</label>
           <select
             id="tgc-region"
             className="tgc-select"
@@ -142,7 +148,7 @@ export function TripGoChecker({ hourly, daily, region }: Props) {
 
         {destRegion && cities.length > 0 && (
           <div className="tgc-select-group">
-            <label className="tgc-label" htmlFor="tgc-city">City (optional)</label>
+            <label className="tgc-label" htmlFor="tgc-city">{text('City (optional)','Lungsod (opsyonal)')}</label>
             <select
               id="tgc-city"
               className="tgc-select"
@@ -158,6 +164,7 @@ export function TripGoChecker({ hourly, daily, region }: Props) {
         )}
       </div>
 
+      {destRegion && <div className="tgc-select-group"><label htmlFor="trip-departure">{text('Departure window (PHT)','Oras ng alis (PHT)')}</label><select className="tgc-select" id="trip-departure" value={departure} onChange={e => setDeparture(e.target.value)}><option value="remaining">{text('All remaining hours on selected day','Lahat ng natitirang oras sa napiling araw')}</option>{availableHours.map(h => <option key={h.time} value={h.time}>{String(h.hour).padStart(2,'0')}:00 · {text('up to 3 hours','hanggang 3 oras')}</option>)}</select></div>}
       {/* Loading state */}
       {isLoading && (
         <div className="tgc-skeleton">
@@ -183,16 +190,14 @@ export function TripGoChecker({ hourly, daily, region }: Props) {
         </div>
       )}
 
-      {/* Verdict display */}
-      {destRegion && !isLoading && !error && verdict && (
-        <>
-          {/* Day selector */}
+      {destRegion && !isLoading && !error && !verdict && <p role="status">Suitability unavailable: missing critical weather data or no remaining forecast hours.</p>}
+      {destRegion && !isLoading && !error && activeDaily.length > 0 && <div>          {/* Day selector */}
           <div className="tgc-days" role="tablist" aria-label="Forecast days">
             {activeDaily.map((d, i) => (
               <button
                 key={d.date}
                 className={`tgc-day ${i === selectedDay ? 'active' : ''} tgc-day-${dayVerdicts[i]}`}
-                onClick={() => setSelectedDay(i)}
+                onClick={() => { setSelectedDay(i); setDeparture('remaining'); }}
                 role="tab"
                 aria-selected={i === selectedDay}
               >
@@ -203,6 +208,10 @@ export function TripGoChecker({ hourly, daily, region }: Props) {
             ))}
           </div>
 
+</div>}
+      {/* Verdict display */}
+      {destRegion && !isLoading && !error && verdict && (
+        <>
           {/* Verdict banner */}
           <div className={`tgc-verdict tgc-verdict-${verdict.verdict.toLowerCase().replace('-', '')}`}>
             <div className="tgc-verdict-icon">
@@ -211,7 +220,7 @@ export function TripGoChecker({ hourly, daily, region }: Props) {
               {verdict.verdict === 'NO-GO' && <CloudRainIcon size={28} color="white" />}
             </div>
             <div className="tgc-verdict-text">
-              <h3 className="tgc-verdict-label">{verdict.verdict === 'GO' ? 'Good to Go!' : verdict.verdict === 'CAUTION' ? 'Proceed with Caution' : 'Not Worth It'}</h3>
+              <h3 className="tgc-verdict-label">{verdict.verdict === 'GO' ? 'Lower forecast disruption' : verdict.verdict === 'CAUTION' ? 'Proceed with Caution' : 'Consider postponing'}</h3>
               <p className="tgc-verdict-summary">{verdict.summary}</p>
             </div>
             <div className="tgc-verdict-score">
@@ -228,7 +237,7 @@ export function TripGoChecker({ hourly, daily, region }: Props) {
             <div className={`tgc-card ${verdict.subScores.rain_prob >= 70 ? 'good' : verdict.subScores.rain_prob >= 40 ? 'moderate' : 'poor'}`}>
               <CloudRainIcon size={18} color="currentColor" />
               <span className="tgc-card-value">{Math.round(verdict.metrics.avgRainProb)}%</span>
-              <span className="tgc-card-label">Rain Chance</span>
+              <span className="tgc-card-label">Mean hourly probability</span>
             </div>
             <div className={`tgc-card ${verdict.subScores.precipitation >= 70 ? 'good' : verdict.subScores.precipitation >= 40 ? 'moderate' : 'poor'}`}>
               <DropletIcon size={18} color="currentColor" />

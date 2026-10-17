@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { CloudRainIcon, ThermometerIcon, DropletIcon, WindIcon, CheckCircleIcon, HandshakeIcon } from './Icons';
 import { REGIONS, getRegionNumber } from '../utils/regions';
 import { REGION_CITIES } from '../utils/cities';
-import { getCached, setCache } from '../hooks/useWeatherCache';
+import { requestForecast } from '../services/forecast-provider';
+import { resolveLocation } from '../utils/locations';
 import './CompareRegions.css';
 
 interface LocationStats {
@@ -19,45 +20,16 @@ interface Props {
 }
 
 async function fetchLocationDay(lat: number, lon: number, label: string, date: string): Promise<LocationStats | null> {
-  const cacheKey = `compare-${lat}-${lon}-${date}`;
-  const cached = getCached<LocationStats>(cacheKey);
-  if (cached) return { ...cached, label };
-
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,precipitation_probability,wind_speed_10m&timezone=Asia/Manila&start_date=${date}&end_date=${date}`;
-
-    // Retry on 429
-    let response: Response | null = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      response = await fetch(url);
-      if (response.ok) break;
-      if (response.status === 429 && attempt < 2) {
-        await new Promise((r) => setTimeout(r, 2000 * Math.pow(2, attempt)));
-        continue;
-      }
-    }
-    if (!response || !response.ok) return null;
-
-    const data = await response.json();
-    const probs: number[] = data.hourly.precipitation_probability;
-    const rains: number[] = data.hourly.precipitation;
-    const temps: number[] = data.hourly.temperature_2m;
-    const winds: number[] = data.hourly.wind_speed_10m;
-    const stats: LocationStats = {
-      label,
-      avg_prob: Math.round(probs.reduce((a, b) => a + b, 0) / probs.length),
-      total_rain: Math.round(rains.reduce((a, b) => a + b, 0) * 10) / 10,
-      avg_temp: Math.round((temps.reduce((a, b) => a + b, 0) / temps.length) * 10) / 10,
-      avg_wind: Math.round((winds.reduce((a, b) => a + b, 0) / winds.length) * 10) / 10,
-    };
-    setCache(cacheKey, stats);
-    return stats;
-  } catch {
-    return null;
-  }
+    const result = await requestForecast({ lat, lon });
+    const day = result.daily.find(d => d.date === date);
+    if (!day) return null;
+    return { label, avg_prob: day.avg_prob, total_rain: day.total_rain, avg_temp: day.avg_temp, avg_wind: day.avg_wind };
+  } catch { return null; }
 }
 
 export function CompareRegions({ date, onClose }: Props) {
+  const requestId = useRef(0);
   // Location A
   const [regionA, setRegionA] = useState('NCR');
   const [cityA, setCityA] = useState('');
@@ -67,19 +39,15 @@ export function CompareRegions({ date, onClose }: Props) {
 
   const [statsA, setStatsA] = useState<LocationStats | null>(null);
   const [statsB, setStatsB] = useState<LocationStats | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => { requestId.current++; setStatsA(null); setStatsB(null); setLoading(false); setError(null); }, [regionA, cityA, regionB, cityB, date]);
   const citiesA = REGION_CITIES[regionA] || [];
   const citiesB = REGION_CITIES[regionB] || [];
 
   function getCoords(region: string, city: string): { lat: number; lon: number } | null {
-    if (city) {
-      const cities = REGION_CITIES[region] || [];
-      const found = cities.find((c) => c.name === city);
-      return found || null;
-    }
-    const cities = REGION_CITIES[region];
-    return cities && cities.length > 0 ? cities[0] : null;
+    return resolveLocation(region, city || null);
   }
 
   function handleCompare() {
@@ -90,11 +58,15 @@ export function CompareRegions({ date, onClose }: Props) {
     const labelA = cityA || `${getRegionNumber(regionA)} (center)`;
     const labelB = cityB || `${getRegionNumber(regionB)} (center)`;
 
+    const request = ++requestId.current;
     setLoading(true);
+    setError(null);
     Promise.all([
       fetchLocationDay(coordsA.lat, coordsA.lon, labelA, date),
       fetchLocationDay(coordsB.lat, coordsB.lon, labelB, date),
     ]).then(([a, b]) => {
+      if (request !== requestId.current) return;
+      if (!a || !b) setError('Comparison unavailable for one or both locations. Try again.');
       setStatsA(a);
       setStatsB(b);
       setLoading(false);
@@ -122,7 +94,7 @@ export function CompareRegions({ date, onClose }: Props) {
             ))}
           </select>
           <select value={cityA} onChange={(e) => setCityA(e.target.value)} className="compare-select" aria-label="City A">
-            <option value="">Entire Region</option>
+            <option value="">Regional reference point</option>
             {citiesA.map((c) => (
               <option key={c.name} value={c.name}>{c.name}</option>
             ))}
@@ -139,7 +111,7 @@ export function CompareRegions({ date, onClose }: Props) {
             ))}
           </select>
           <select value={cityB} onChange={(e) => setCityB(e.target.value)} className="compare-select" aria-label="City B">
-            <option value="">Entire Region</option>
+            <option value="">Regional reference point</option>
             {citiesB.map((c) => (
               <option key={c.name} value={c.name}>{c.name}</option>
             ))}
@@ -151,6 +123,7 @@ export function CompareRegions({ date, onClose }: Props) {
         {loading ? 'Comparing...' : 'Compare'}
       </button>
 
+      {error && <p role="alert">{error}</p>}
       {/* Results */}
       {loading && <p className="compare-loading">Fetching weather data...</p>}
 
@@ -162,7 +135,7 @@ export function CompareRegions({ date, onClose }: Props) {
             ) : (
               <span className="verdict-text">
                 <CheckCircleIcon size={16} color="var(--success)" />{' '}
-                <strong>{statsA.avg_prob < statsB.avg_prob ? statsA.label : statsB.label}</strong> is the better destination - {Math.min(statsA.avg_prob, statsB.avg_prob)}% vs {Math.max(statsA.avg_prob, statsB.avg_prob)}% rain chance
+                <strong>{statsA.avg_prob < statsB.avg_prob ? statsA.label : statsB.label}</strong> has a lower average hourly rain probability - {Math.min(statsA.avg_prob, statsB.avg_prob)}% vs {Math.max(statsA.avg_prob, statsB.avg_prob)}% mean hourly probability
               </span>
             )}
           </div>

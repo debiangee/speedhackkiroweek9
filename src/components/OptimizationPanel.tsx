@@ -8,8 +8,23 @@ import {
   type ReasoningStep,
 } from '../utils/optimization-engine';
 import type { HourlyData, DailySummary } from '../hooks/useWeatherData';
-import { CheckCircleIcon, AlertCircleIcon, ClockIcon, TrendingUpIcon } from './Icons';
+import { CheckCircleIcon, AlertCircleIcon, ClockIcon, TrendingUpIcon, CarIcon, RunningIcon, PlaneIcon, UmbrellaIcon } from './Icons';
 import './OptimizationPanel.css';
+
+function renderGoalIcon(type: GoalType) {
+  switch (type) {
+    case 'commute':
+      return <CarIcon size={16} color="currentColor" />;
+    case 'outdoor-activity':
+      return <RunningIcon size={16} color="currentColor" />;
+    case 'travel':
+      return <PlaneIcon size={16} color="currentColor" />;
+    case 'stay-dry':
+      return <UmbrellaIcon size={16} color="currentColor" />;
+    default:
+      return <CarIcon size={16} color="currentColor" />;
+  }
+}
 
 interface Props {
   hourly: HourlyData[];
@@ -80,7 +95,7 @@ export function OptimizationPanel({ hourly, daily, region: _region }: Props) {
             aria-checked={selectedGoal === g.type}
             title={g.description}
           >
-            <span className="opt-goal-icon">{g.icon}</span>
+            <span className="opt-goal-icon" aria-hidden="true">{renderGoalIcon(g.type)}</span>
             <span className="opt-goal-label">{g.label}</span>
           </button>
         ))}
@@ -98,14 +113,14 @@ export function OptimizationPanel({ hourly, daily, region: _region }: Props) {
           <div className="opt-verdict-text">
             <strong className="opt-verdict">{result.verdict}</strong>
             <span className="opt-meta">
-              Iteration #{result.iterationCount} · {result.lastUpdated}
+              Calculation #{result.iterationCount} · {result.lastUpdated}
             </span>
           </div>
         </div>
 
         {/* Confidence */}
         <div className="opt-confidence-section">
-          <span className="opt-section-label">Confidence Score</span>
+          <span className="opt-section-label">Suitability score (heuristic)</span>
           <ConfidenceMeter value={result.confidence} />
         </div>
 

@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useId } from 'react';
 import { SearchIcon, MapPinIcon, XIcon } from './Icons';
 import { REGIONS } from '../utils/regions';
 import { REGION_CITIES } from '../utils/cities';
 import './RegionSearch.css';
+import { useLocale } from '../hooks/useLocale';
 
 interface Props {
   selected: string;
@@ -17,7 +18,7 @@ interface SearchResult {
   sublabel: string;
 }
 
-function buildSearchResults(query: string): SearchResult[] {
+export function buildSearchResults(query: string): SearchResult[] {
   const q = query.toLowerCase().trim();
   if (!q) {
     // Show all regions when no query
@@ -65,10 +66,13 @@ function buildSearchResults(query: string): SearchResult[] {
   }
 
   // Limit results to keep it fast
-  return results.slice(0, 20);
+  return results.sort((a, b) => Number(b.cityName?.toLowerCase() === q) - Number(a.cityName?.toLowerCase() === q)).slice(0, 20);
 }
 
 export function RegionSearch({ selected, onSelect }: Props) {
+  const { locale } = useLocale();
+  const listId = useId();
+  const [activeIndex, setActiveIndex] = useState(-1);
   const [searchQuery, setSearchQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -104,14 +108,24 @@ export function RegionSearch({ selected, onSelect }: Props) {
           ref={inputRef}
           type="text"
           className="search-input"
-          placeholder="Search region or city..."
+          placeholder={locale === 'fil' ? 'Hanapin ang rehiyon o lungsod…' : 'Search region or city…'}
+          role="combobox"
+          aria-autocomplete="list"
+          aria-controls={listId}
+          aria-activedescendant={isOpen && activeIndex >= 0 ? `${listId}-${activeIndex}` : undefined}
+          onKeyDown={e => {
+            if (e.key === 'Escape') { setIsOpen(false); setActiveIndex(-1); }
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); setIsOpen(true); setActiveIndex(i => Math.max(0, Math.min(results.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))); }
+            if (e.key === 'Enter' && isOpen && results[activeIndex]) { e.preventDefault(); handleSelect(results[activeIndex]); setActiveIndex(-1); }
+          }}
           value={searchQuery}
           onChange={(e) => {
             setSearchQuery(e.target.value);
+            setActiveIndex(-1);
             setIsOpen(true);
           }}
           onFocus={() => setIsOpen(true)}
-          aria-label="Search for a Philippine region or city"
+          aria-label={locale === 'fil' ? 'Hanapin ang rehiyon o lungsod' : 'Search for a Philippine region or city'}
           aria-expanded={isOpen}
         />
         {searchQuery && (
@@ -129,13 +143,15 @@ export function RegionSearch({ selected, onSelect }: Props) {
       </div>
 
       {isOpen && (
-        <ul className="search-dropdown" role="listbox">
+        <ul className="search-dropdown" role="listbox" id={listId} aria-label="Location suggestions">
           {results.length === 0 ? (
             <li className="search-empty">No results found</li>
           ) : (
             results.map((r, i) => (
               <li
                 key={`${r.regionId}-${r.cityName || ''}-${i}`}
+                id={`${listId}-${i}`}
+                data-active={activeIndex === i}
                 className={`search-item ${r.type === 'city' ? 'is-city' : ''} ${r.regionId === selected && !r.cityName ? 'active' : ''}`}
                 onClick={() => handleSelect(r)}
                 role="option"

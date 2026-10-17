@@ -1,133 +1,56 @@
 import { test, expect } from '@playwright/test';
-
-test.describe('PH Rain Forecast — Core App', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-  });
-
-  test('loads the app with header and main content', async ({ page }) => {
-    await expect(page.locator('h1')).toContainText('Weather Lang');
-    await expect(page.locator('#main-content')).toBeVisible();
-    await expect(page.locator('footer')).toBeVisible();
-  });
-
-  test('skip-to-content link works', async ({ page }) => {
-    const skipLink = page.locator('a.skip-link');
-    await skipLink.focus();
-    await expect(skipLink).toBeVisible();
-  });
-
-  test('dark mode toggle switches theme', async ({ page }) => {
-    const toggle = page.locator('[class*="dark-mode"]').first();
-    await expect(toggle).toBeVisible();
-    await toggle.click();
-    // Dark mode applies data-theme="dark" on <html>
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-    // Toggle back
-    await toggle.click();
-    await expect(page.locator('html')).not.toHaveAttribute('data-theme', 'dark');
-  });
-
-  test('footer contains attribution links', async ({ page }) => {
-    const footer = page.locator('footer');
-    await expect(footer.locator('a[href*="open-meteo"]')).toBeVisible();
-    await expect(footer.locator('a[href*="pagasa"]')).toBeVisible();
-  });
+import { prepare } from './fixtures';
+test.beforeEach(async ({page}) => { await prepare(page); });
+test('forecast-first overview, official sources and deferred maps', async ({page}) => {
+  const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
+  const calls: string[] = []; page.on('request', r => calls.push(r.url()));
+  await page.goto('/');
+  await expect(page.locator('.hero-temperature')).toHaveText('27°C');
+  const temperatureBox=await page.locator('.hero-temperature').boundingBox();
+  expect(temperatureBox!.y+temperatureBox!.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+  await expect(page.locator('.conditions-primary')).toContainText('2026-10-18 · 12:00 PHT');
+  await expect(page.locator('.conditions-primary')).toContainText('NOT AN OBSERVATION');
+  await expect(page.locator('.freshness')).toContainText('Open-Meteo');
+  await expect(page.getByRole('navigation', {name:'Primary navigation'}).getByRole('link')).toHaveCount(6);
+  await expect(page.getByText('This app does not ingest official warnings.',{exact:false})).toBeVisible();
+  expect(calls.filter(u => /rainviewer|overpass|arcgisonline|tile.openstreetmap/.test(u))).toEqual([]);
+  expect(calls.filter(u => u.startsWith('https://api.open-meteo.com/'))).toHaveLength(1);
+  expect(errors).toEqual([]);
 });
-
-test.describe('PH Rain Forecast — Dashboard Interactions', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    // Wait for dashboard to load
-    await page.waitForSelector('#main-content', { state: 'visible' });
-  });
-
-  test('dashboard renders without errors', async ({ page }) => {
-    // No uncaught errors
-    const errors: string[] = [];
-    page.on('pageerror', (err) => errors.push(err.message));
-    await page.waitForTimeout(2000);
-    expect(errors).toHaveLength(0);
-  });
-
-  test('region selector is present and interactive', async ({ page }) => {
-    // Look for the search input inside the dashboard-search container
-    const searchInput = page.locator('.dashboard-search input, [class*="search"] input').first();
-
-    if (await searchInput.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await searchInput.click();
-      await expect(searchInput).toBeFocused();
-    } else {
-      // If no input found, just verify dashboard-search container exists
-      const searchContainer = page.locator('[class*="search"]').first();
-      await expect(searchContainer).toBeVisible();
-    }
-  });
+test('location search works from keyboard and changes forecast point', async ({page}) => {
+  await page.goto('/'); await expect(page.locator('.hero-temperature')).toBeVisible();
+  const input = page.getByRole('combobox', {name:'Search for a Philippine region or city'});
+  await input.fill('Makati'); await input.press('ArrowDown');
+  await expect(input).toHaveAttribute('aria-activedescendant', /.+-0/);
+  await input.press('Enter');
+  await expect(page.locator('.location-heading h3')).toHaveText('Makati');
+  await expect(page.locator('.hero-temperature')).toHaveText('31°C');
 });
-
-test.describe('PH Rain Forecast — Loop Orchestration (Multi-Region)', () => {
-  const regions = [
-    'Metro Manila',
-    'Central Visayas',
-    'Western Visayas',
-    'Davao Region',
-    'Calabarzon',
-  ];
-
-  for (const region of regions) {
-    test(`loads data for region: ${region}`, async ({ page }) => {
-      await page.goto('/');
-      await page.waitForSelector('#main-content', { state: 'visible' });
-
-      // Wait for initial loader to disappear before interacting
-      await page.locator('.cinematic-loader').waitFor({ state: 'hidden', timeout: 15000 }).catch(() => {});
-
-      // Try to find and use a region search/selector
-      const searchInput = page.locator(
-        'input[type="text"], input[type="search"], [class*="search"] input'
-      ).first();
-
-      if (await searchInput.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await searchInput.fill(region);
-        await page.waitForTimeout(500);
-
-        // Use keyboard to select the first result (avoids pointer interception issues on mobile)
-        const option = page.locator(`text=${region}`).first();
-        if (await option.isVisible({ timeout: 2000 }).catch(() => false)) {
-          await option.click({ force: true, timeout: 5000 }).catch(async () => {
-            // Fallback: press Enter to select from the dropdown
-            await searchInput.press('Enter');
-          });
-          await page.waitForTimeout(1000);
-        }
-      }
-
-      // Verify no crash — page should still be functional
-      await expect(page.locator('#main-content')).toBeVisible();
-      await expect(page.locator('h1')).toContainText('Weather Lang');
-    });
-  }
+test('theme and Filipino affect core content and navigation', async ({page}) => {
+  await page.goto('/');
+  await page.getByRole('button',{name:'Switch to dark mode'}).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
+  await page.getByRole('button',{name:'Switch to Filipino'}).click();
+  await expect(page.locator('html')).toHaveAttribute('lang','fil');
+  await expect(page.getByRole('heading',{name:'Lokal na forecast'})).toBeVisible();
+  await expect(page.getByRole('navigation',{name:'Pangunahing nabigasyon'}).getByRole('link',{name:'Taya ng panahon'})).toBeVisible();
 });
-
-test.describe('PH Rain Forecast — Responsive Layout', () => {
-  const viewports = [
-    { name: 'mobile', width: 375, height: 667 },
-    { name: 'tablet', width: 768, height: 1024 },
-    { name: 'desktop', width: 1440, height: 900 },
-  ];
-
-  for (const vp of viewports) {
-    test(`renders correctly at ${vp.name} (${vp.width}x${vp.height})`, async ({ page }) => {
-      await page.setViewportSize({ width: vp.width, height: vp.height });
-      await page.goto('/');
-      await expect(page.locator('.app')).toBeVisible();
-      await expect(page.locator('h1')).toBeVisible();
-      await expect(page.locator('#main-content')).toBeVisible();
-
-      // No horizontal overflow (allow slightly more tolerance for mobile)
-      const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
-      const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
-      expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 25); // 25px tolerance for minor overflow
-    });
-  }
+test('provider outage exposes no invented current forecast and keeps official resources', async ({page}) => {
+  await page.route('https://api.open-meteo.com/**', r => r.fulfill({status:503,json:{error:true}}));
+  await page.goto('/'); await expect(page.getByRole('heading',{name:'Forecast unavailable'})).toBeVisible();
+  await expect(page.locator('.hero-temperature')).toHaveCount(0);
+  await expect(page.getByRole('link',{name:'PAGASA tropical cyclone bulletins'})).toBeVisible();
+});
+for (const width of [320,390,768,1440]) test(`no page overflow at ${width}px`, async ({page}) => {
+  await page.setViewportSize({width,height:900}); await page.goto('/'); await expect(page.locator('.hero-temperature')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+  await page.getByRole('button',{name:'Find mapped facilities — status unverified'}).click();
+  await expect(page.getByText(/not verified operational evacuation centers/)).toBeVisible();
+});
+test('forecast tabs support arrow keys and radar failure stays explicit',async({page})=>{
+ await page.goto('/'); await expect(page.locator('.hero-temperature')).toBeVisible();
+ const selected=page.locator('.day-card.selected');await selected.focus();await selected.press('ArrowRight');
+ await expect(page.locator('#forecast-day-panel h3')).toContainText('2026-10-19');
+ await page.getByRole('button',{name:'Rain radar',exact:true}).click();
+ await expect(page.getByText('Could not load radar data. Please try again later.')).toBeVisible();
 });

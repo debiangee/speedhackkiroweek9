@@ -1,10 +1,37 @@
 import { useState } from 'react';
 import { getHotlinesForRegion, getHotlineTypeLabel, type Hotline } from '../utils/emergency-hotlines';
 import { getRegionLabel } from '../utils/regions';
+import {
+  MapPinIcon,
+  FlagIcon,
+  ShieldAlertIcon,
+  PoliceIcon,
+  FlameIcon,
+  MedicalIcon,
+  AmbulanceIcon,
+  PhoneCallIcon,
+} from './Icons';
 import './EmergencyHotlines.css';
 
 interface Props {
   region: string;
+}
+
+function renderHotlineTypeIcon(type: Hotline['type']) {
+  switch (type) {
+    case 'disaster':
+      return <ShieldAlertIcon size={12} color="currentColor" />;
+    case 'police':
+      return <PoliceIcon size={12} color="currentColor" />;
+    case 'fire':
+      return <FlameIcon size={12} color="currentColor" />;
+    case 'medical':
+      return <MedicalIcon size={12} color="currentColor" />;
+    case 'rescue':
+      return <AmbulanceIcon size={12} color="currentColor" />;
+    case 'general':
+      return <PhoneCallIcon size={12} color="currentColor" />;
+  }
 }
 
 function HotlineCard({ hotline }: { hotline: Hotline }) {
@@ -16,7 +43,10 @@ function HotlineCard({ hotline }: { hotline: Hotline }) {
     >
       <div className="hotline-info">
         <span className="hotline-name">{hotline.name}</span>
-        <span className="hotline-type-badge">{getHotlineTypeLabel(hotline.type)}</span>
+        <span className="hotline-type-badge">
+          <span className="hotline-badge-icon" aria-hidden="true">{renderHotlineTypeIcon(hotline.type)}</span>
+          {getHotlineTypeLabel(hotline.type)}
+        </span>
       </div>
       <span className="hotline-number">{hotline.number}</span>
       <span className="hotline-tap-hint">Tap to call</span>
@@ -34,10 +64,11 @@ export function EmergencyHotlines({ region }: Props) {
       {regional && (
         <div className="hotlines-section">
           <h4 className="hotlines-section-title">
-            <span className="material-symbols-rounded" aria-hidden="true">location_on</span> Near You — {getRegionLabel(region)}
+            <MapPinIcon size={16} color="var(--accent)" />
+            <span>Near You — {getRegionLabel(region)}</span>
           </h4>
           <p className="hotlines-source">Office of Civil Defense – {regional.label}</p>
-          <div className="hotlines-grid" role="list" aria-label={`Emergency hotlines for ${regional.label}`}>
+          <div className="hotlines-grid" role="group" aria-label={`Emergency hotlines for ${regional.label}`}>
             {regional.hotlines.map((h, i) => (
               <HotlineCard key={i} hotline={h} />
             ))}
@@ -62,8 +93,11 @@ export function EmergencyHotlines({ region }: Props) {
 
       {showNational && (
         <div className="hotlines-section hotlines-national">
-          <h4 className="hotlines-section-title">🇵🇭 National Emergency Numbers</h4>
-          <div className="hotlines-grid" role="list" aria-label="National emergency hotlines">
+          <h4 className="hotlines-section-title">
+            <FlagIcon size={16} color="var(--accent)" />
+            <span>National Emergency Numbers</span>
+          </h4>
+          <div className="hotlines-grid" role="group" aria-label="National emergency hotlines">
             {national.map((h, i) => (
               <HotlineCard key={i} hotline={h} />
             ))}

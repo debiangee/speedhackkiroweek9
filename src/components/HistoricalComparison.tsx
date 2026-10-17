@@ -1,3 +1,4 @@
+import { forecastEpoch } from '../utils/time';
 import { useState, useEffect } from 'react';
 import { type DailySummary } from '../hooks/useWeatherData';
 import './HistoricalComparison.css';
@@ -18,45 +19,52 @@ export function HistoricalComparison({ daily, coords }: HistoricalComparisonProp
   const [lastYearData, setLastYearData] = useState<HistoricalDay[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const firstDate = daily[0]?.date;
+  const dayCount = daily.length;
+  const key = `${coords.lat},${coords.lon}:${firstDate}:${dayCount}`;
+  const [resolvedKey, setResolvedKey] = useState('');
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
 
     async function fetchHistorical() {
       setLoading(true);
       try {
-        // Get same week last year
-        const now = new Date();
-        const lastYear = new Date(now);
-        lastYear.setFullYear(lastYear.getFullYear() - 1);
+        if (!firstDate || !dayCount) throw new Error('No forecast period');
+        const lastYear = new Date(firstDate + 'T00:00:00Z');
+        lastYear.setUTCFullYear(lastYear.getUTCFullYear() - 1);
         const startDate = lastYear.toISOString().split('T')[0];
-        const endDate = new Date(lastYear.getTime() + 6 * 86400000).toISOString().split('T')[0];
+        const endDate = new Date(lastYear.getTime() + (dayCount - 1) * 86400000).toISOString().split('T')[0];
 
         const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${coords.lat}&longitude=${coords.lon}&start_date=${startDate}&end_date=${endDate}&daily=precipitation_sum,temperature_2m_mean&timezone=Asia/Manila`;
 
-        const res = await fetch(url);
+        const res = await fetch(url, { signal: controller.signal, cache: 'no-store' });
         if (!res.ok) throw new Error('Historical API error');
         const data = await res.json();
 
+        if (!Array.isArray(data.daily?.time) || data.daily.time.length !== dayCount || ['precipitation_sum', 'temperature_2m_mean'].some(k => !Array.isArray(data.daily[k]) || data.daily[k].length !== dayCount || data.daily[k].some((v: unknown) => typeof v !== 'number' || !Number.isFinite(v)))) throw new Error('Incomplete archive data');
         if (!cancelled && data.daily) {
           const days: HistoricalDay[] = data.daily.time.map((date: string, i: number) => ({
             date,
-            total_rain: data.daily.precipitation_sum[i] || 0,
-            avg_temp: data.daily.temperature_2m_mean[i] || 0,
+            total_rain: data.daily.precipitation_sum[i],
+            avg_temp: data.daily.temperature_2m_mean[i],
           }));
           setLastYearData(days);
         }
       } catch {
         if (!cancelled) setLastYearData([]);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) { setLoading(false); setResolvedKey(key); }
+        clearTimeout(timeout);
       }
     }
 
     fetchHistorical();
-    return () => { cancelled = true; };
-  }, [coords.lat, coords.lon]);
+    return () => { cancelled = true; controller.abort(); clearTimeout(timeout); };
+  }, [coords.lat, coords.lon, firstDate, dayCount, key]);
 
-  if (loading) {
+  if (loading || resolvedKey !== key) {
     return <div className="historical-loading">Loading historical data...</div>;
   }
 
@@ -69,6 +77,7 @@ export function HistoricalComparison({ daily, coords }: HistoricalComparisonProp
   const currentAvgTemp = daily.reduce((s, d) => s + d.avg_temp, 0) / daily.length;
   const lastYearAvgTemp = lastYearData.reduce((s, d) => s + d.avg_temp, 0) / lastYearData.length;
 
+  const periodLabel = `${new Date(forecastEpoch(firstDate + 'T00:00')).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' })} · ${dayCount} days`;
   const rainDiff = currentTotalRain - lastYearTotalRain;
   const tempDiff = currentAvgTemp - lastYearAvgTemp;
 
@@ -78,6 +87,7 @@ export function HistoricalComparison({ daily, coords }: HistoricalComparisonProp
 
   return (
     <div className="historical-comparison">
+      <p>Open-Meteo Archive: previous-year calendar period vs forecast {periodLabel}, at the same coordinates. This is a year-to-year comparison, not a climate baseline.</p>
       <div className="historical-cards">
         <div className="historical-card">
           <span className="hist-label">Rain this week</span>
@@ -106,7 +116,7 @@ export function HistoricalComparison({ daily, coords }: HistoricalComparisonProp
           <div className="bar-track">
             <div
               className="bar-fill bar-current"
-              style={{ width: `${Math.min((currentTotalRain / Math.max(currentTotalRain, lastYearTotalRain)) * 100, 100)}%` }}
+              style={{ width: `${Math.min((currentTotalRain / Math.max(1, currentTotalRain, lastYearTotalRain)) * 100, 100)}%` }}
             />
           </div>
           <span className="bar-val">{currentTotalRain.toFixed(1)}mm</span>
@@ -116,7 +126,7 @@ export function HistoricalComparison({ daily, coords }: HistoricalComparisonProp
           <div className="bar-track">
             <div
               className="bar-fill bar-lastyear"
-              style={{ width: `${Math.min((lastYearTotalRain / Math.max(currentTotalRain, lastYearTotalRain)) * 100, 100)}%` }}
+              style={{ width: `${Math.min((lastYearTotalRain / Math.max(1, currentTotalRain, lastYearTotalRain)) * 100, 100)}%` }}
             />
           </div>
           <span className="bar-val">{lastYearTotalRain.toFixed(1)}mm</span>

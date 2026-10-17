@@ -1,15 +1,16 @@
-/// <reference types="vitest" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import vercel from './vercel.json';
 
 export default defineConfig({
   plugins: [react()],
+  preview: { headers: Object.fromEntries(vercel.headers[0].headers.map(h => [h.key,h.value])) },
   build: {
-    target: 'esnext',
+    target: 'es2020',
     chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
-        manualChunks(id) {
+        manualChunks(id: string) {
           if (id.includes('node_modules')) {
             if (id.includes('react-dom') || id.includes('/react/') || id.includes('scheduler')) {
               return 'react-vendor';
@@ -23,11 +24,4 @@ export default defineConfig({
       },
     },
   },
-  test: {
-    globals: true,
-    environment: 'jsdom',
-    setupFiles: ['./src/test-setup.ts'],
-    include: ['src/**/*.test.{ts,tsx}'],
-    exclude: ['e2e/**', 'node_modules/**'],
-  },
-} as any);
+});

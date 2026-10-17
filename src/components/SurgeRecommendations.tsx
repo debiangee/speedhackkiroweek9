@@ -1,15 +1,23 @@
 import type { Recommendation } from '../utils/surge-engine';
+import { ZapIcon, HourglassIcon, RepeatIcon } from './Icons';
 import './SurgeRecommendations.css';
 
 interface Props {
   recommendations: Recommendation[];
 }
 
-const ACTION_ICONS: Record<string, string> = {
-  book_now: '⚡',
-  wait: '⏳',
-  switch_mode: '🔄',
-};
+function renderActionIcon(action: Recommendation['action']) {
+  switch (action) {
+    case 'book_now':
+      return <ZapIcon size={18} color="currentColor" />;
+    case 'wait':
+      return <HourglassIcon size={18} color="currentColor" />;
+    case 'switch_mode':
+      return <RepeatIcon size={18} color="currentColor" />;
+    default:
+      return <ZapIcon size={18} color="currentColor" />;
+  }
+}
 
 const CONFIDENCE_LABELS: Record<string, string> = {
   high: 'High confidence',
@@ -28,7 +36,7 @@ export function SurgeRecommendations({ recommendations }: Props) {
           className={`surge-rec-card action-${rec.action}`}
           role="listitem"
         >
-          <div className="rec-priority">{ACTION_ICONS[rec.action]}</div>
+          <div className="rec-priority" aria-hidden="true">{renderActionIcon(rec.action)}</div>
           <div className="rec-body">
             <strong className="rec-action-title">{rec.title}</strong>
             <p className="rec-description">{rec.description}</p>

@@ -77,16 +77,16 @@ function scoreVisibility(avgMeters: number): number {
 
 function findPrimaryFactor(subScores: VerdictResult['subScores']): string {
   const weighted = {
-    'Rain probability': subScores.rain_prob * 0.4,
-    'Total rainfall': subScores.precipitation * 0.25,
-    'Wind speed': subScores.wind * 0.2,
-    'Low visibility': subScores.visibility * 0.15,
+    'Rain probability': (100 - subScores.rain_prob) * 0.4,
+    'Total rainfall': (100 - subScores.precipitation) * 0.25,
+    'Wind speed': (100 - subScores.wind) * 0.2,
+    'Low visibility': (100 - subScores.visibility) * 0.15,
   };
 
-  let lowest = Infinity;
+  let lowest = -Infinity;
   let factor = 'Rain probability';
   for (const [key, val] of Object.entries(weighted)) {
-    if (val < lowest) {
+    if (val > lowest) {
       lowest = val;
       factor = key;
     }
@@ -98,7 +98,7 @@ function findPrimaryFactor(subScores: VerdictResult['subScores']): string {
 
 function generateSummary(verdict: TripVerdict, primaryFactor: string, metrics: VerdictResult['metrics']): string {
   if (verdict === 'GO') {
-    return 'Weather conditions are favorable for travel. Enjoy your trip!';
+    return 'Lower forecast-related disruption in this window. This is planning guidance, not confirmation of road safety.';
   }
   if (verdict === 'CAUTION') {
     if (primaryFactor === 'Rain probability') {
@@ -127,13 +127,24 @@ function generateSummary(verdict: TripVerdict, primaryFactor: string, metrics: V
 
 // --- Main verdict computation ---
 
+/** Conservative product guardrails, NOT official warning thresholds.
+ * A critical hourly hazard overrides favorable daily averages. */
+export function criticalHazard(h: HourlyData): string | null {
+  if (h.wind_speed >= 60 || h.wind_gusts >= 80) return 'Strong forecast wind or gusts';
+  if (h.visibility < 1000) return 'Very low forecast visibility';
+  if (h.precipitation >= 15 || [95, 96, 99].includes(h.weather_code)) return 'Heavy forecast rain or thunderstorm';
+  return null;
+}
+export function hasCriticalData(h: HourlyData): boolean {
+  return [h.precipitation_probability, h.precipitation, h.wind_speed, h.wind_gusts, h.visibility, h.weather_code].every(v => typeof v === 'number' && Number.isFinite(v) && v >= 0);
+}
 export function computeVerdict(hourly: HourlyData[]): VerdictResult | null {
-  if (hourly.length === 0) return null;
+  if (hourly.length === 0 || hourly.some(h => !hasCriticalData(h))) return null;
 
   const avgRainProb = hourly.reduce((s, h) => s + h.precipitation_probability, 0) / hourly.length;
   const totalRain = hourly.reduce((s, h) => s + h.precipitation, 0);
   const avgWind = hourly.reduce((s, h) => s + h.wind_speed, 0) / hourly.length;
-  const avgVisibility = hourly.reduce((s, h) => s + (h.visibility || 10000), 0) / hourly.length;
+  const avgVisibility = hourly.reduce((s, h) => s + (h.visibility), 0) / hourly.length;
 
   const subScores = {
     rain_prob: clamp(scoreRainProb(avgRainProb)),
@@ -148,7 +159,8 @@ export function computeVerdict(hourly: HourlyData[]): VerdictResult | null {
     subScores.wind * 0.2 +
     subScores.visibility * 0.15;
 
-  const score = Math.round(rawScore);
+  const hazard = hourly.map(criticalHazard).find(Boolean);
+  const score = hazard ? Math.min(39, Math.round(rawScore)) : Math.round(rawScore);
 
   let verdict: TripVerdict;
   if (score >= 70) verdict = 'GO';
@@ -162,8 +174,8 @@ export function computeVerdict(hourly: HourlyData[]): VerdictResult | null {
     avgVisibility: Math.round(avgVisibility),
   };
 
-  const primaryFactor = findPrimaryFactor(subScores);
-  const summary = generateSummary(verdict, primaryFactor, metrics);
+  const primaryFactor = hazard || findPrimaryFactor(subScores);
+  const summary = hazard ? `${hazard}: consider postponing and consult official advisories. Road conditions are not verified.` : generateSummary(verdict, primaryFactor, metrics);
 
   return { verdict, score, summary, primaryFactor, metrics, subScores };
 }
@@ -171,10 +183,11 @@ export function computeVerdict(hourly: HourlyData[]): VerdictResult | null {
 // --- Travel window computation ---
 
 function computeHourScore(h: HourlyData): number {
+  if (!hasCriticalData(h) || criticalHazard(h)) return 0;
   const rp = clamp(scoreRainProb(h.precipitation_probability));
   const precip = clamp(100 - (h.precipitation / 2) * 100); // 0mm=100, 2mm+=0 per hour
   const wi = clamp(scoreWind(h.wind_speed));
-  const vi = clamp(scoreVisibility(h.visibility || 10000));
+  const vi = clamp(scoreVisibility(h.visibility));
 
   return rp * 0.4 + precip * 0.25 + wi * 0.2 + vi * 0.15;
 }
@@ -189,7 +202,8 @@ export function findTravelWindows(hourly: HourlyData[]): { best: TravelWindow | 
   let allBad = true;
 
   for (let i = 0; i <= hourly.length - 3; i++) {
-    const windowScore = (
+    const blocked = hourly.slice(i, i + 3).some(h => !hasCriticalData(h) || criticalHazard(h));
+    const windowScore = blocked ? 0 : (
       computeHourScore(hourly[i]) +
       computeHourScore(hourly[i + 1]) +
       computeHourScore(hourly[i + 2])
@@ -222,7 +236,7 @@ export function getTripAdvice(verdict: TripVerdict, hourly: HourlyData[]): TripA
   if (verdict === 'GO') {
     items.push({ text: 'Don\'t forget sunscreen if outdoors', type: 'info' });
     items.push({ text: 'Stay hydrated — bring water', type: 'info' });
-    items.push({ text: 'Rain gear is optional today', type: 'info' });
+    items.push({ text: 'Check updated forecasts and official advisories before leaving', type: 'info' });
   } else if (verdict === 'CAUTION') {
     items.push({ text: 'Bring an umbrella', type: 'warning' });
     items.push({ text: 'Wear waterproof footwear', type: 'warning' });
@@ -239,7 +253,7 @@ export function getTripAdvice(verdict: TripVerdict, hourly: HourlyData[]): TripA
   const maxWind = Math.max(...hourly.map((h) => h.wind_speed), 0);
   if (maxWind > 40) {
     items.push({
-      text: `Wind advisory: gusts up to ${Math.round(maxWind)} km/h — secure loose belongings`,
+      text: `Wind advisory: forecast sustained wind up to ${Math.round(maxWind)} km/h — secure loose belongings`,
       type: 'danger',
     });
   }

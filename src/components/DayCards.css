@@ -1,12 +1,12 @@
 /* ============================================
-   DAY CARDS — Cards with entrance animation
+   DAY CARDS — 7-Day Forecast Cards
    ============================================ */
 
 .day-cards {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.65rem;
   overflow-x: auto;
-  padding: 0.3rem 0;
+  padding: 0.4rem 0.2rem 0.8rem;
   -webkit-overflow-scrolling: touch;
   min-width: 0;
   max-width: 100%;
@@ -14,115 +14,277 @@
 }
 
 .day-cards::-webkit-scrollbar {
-  height: 3px;
+  height: 4px;
+}
+
+.day-cards::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .day-cards::-webkit-scrollbar-thumb {
   background: var(--text-muted);
   border-radius: 4px;
+  opacity: 0.5;
 }
 
 .day-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
-  min-width: 100px;
-  max-width: 110px;
+  gap: 0.45rem;
+  min-width: 110px;
+  max-width: 120px;
   flex-shrink: 0;
-  padding: 0.75rem 0.5rem;
+  padding: 0.85rem 0.6rem;
   border-radius: var(--radius-md);
   border: 1.5px solid var(--border-color);
   background: var(--bg-card);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition:
+    transform var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast);
   scroll-snap-align: start;
   text-align: center;
   -webkit-tap-highlight-color: transparent;
-  animation: fadeInUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: fadeInUp 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  position: relative;
+  box-shadow: var(--shadow-sm);
 }
 
 /* Stagger day card entrance */
 .day-card:nth-child(1) { animation-delay: 0.02s; }
-.day-card:nth-child(2) { animation-delay: 0.06s; }
-.day-card:nth-child(3) { animation-delay: 0.10s; }
-.day-card:nth-child(4) { animation-delay: 0.14s; }
-.day-card:nth-child(5) { animation-delay: 0.18s; }
-.day-card:nth-child(6) { animation-delay: 0.22s; }
-.day-card:nth-child(7) { animation-delay: 0.26s; }
+.day-card:nth-child(2) { animation-delay: 0.05s; }
+.day-card:nth-child(3) { animation-delay: 0.08s; }
+.day-card:nth-child(4) { animation-delay: 0.11s; }
+.day-card:nth-child(5) { animation-delay: 0.14s; }
+.day-card:nth-child(6) { animation-delay: 0.17s; }
+.day-card:nth-child(7) { animation-delay: 0.20s; }
 
 .day-card:hover {
   border-color: var(--accent);
-  box-shadow: var(--shadow-glow);
-  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
 }
 
 .day-card:active {
-  transform: scale(0.97) translateY(0);
+  transform: scale(0.98) translateY(0);
 }
 
+/* Selected state: prominent border, elevated background, glow */
 .day-card.selected {
   border-color: var(--accent);
   background: var(--accent-light);
-  box-shadow: var(--shadow-glow);
+  box-shadow: 0 0 0 1.5px var(--accent), var(--shadow-md);
+  transform: translateY(-2px);
 }
 
+/* Today indicator border accent */
+.day-card.is-today {
+  border-top: 3px solid var(--accent);
+}
+
+/* Header */
 .day-card-header {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  width: 100%;
 }
 
-.day-name {
-  font-size: 0.78rem;
+.day-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  justify-content: center;
+}
+
+.day-weekday {
+  font-size: 0.82rem;
   font-weight: 700;
   color: var(--text-primary);
-  letter-spacing: -0.01em;
+  letter-spacing: 0.02em;
+}
+
+.today-badge {
+  font-size: 0.58rem;
+  font-weight: 800;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: var(--accent);
+  color: #fff;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
 }
 
 .day-date {
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   color: var(--text-secondary);
+  font-weight: 500;
 }
 
-.day-icon {
+/* Weather Icon */
+.day-icon-wrapper {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 28px;
+  height: 32px;
+  margin: 0.15rem 0;
 }
 
-.day-card-info {
+.day-weather-svg.clear {
+  color: #f59e0b;
+}
+
+.day-weather-svg.mostly-dry {
+  color: #f59e0b;
+}
+
+.day-weather-svg.showers {
+  color: #3b82f6;
+}
+
+.day-weather-svg.rain {
+  color: #2563eb;
+}
+
+.day-weather-svg.storm {
+  color: #1d4ed8;
+}
+
+[data-theme="dark"] .day-weather-svg.showers {
+  color: #60a5fa;
+}
+
+[data-theme="dark"] .day-weather-svg.rain {
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .day-weather-svg.storm {
+  color: #60a5fa;
+}
+
+/* Temperatures High / Low */
+.day-temps-row {
   display: flex;
-  flex-direction: column;
-  gap: 0.05rem;
+  align-items: baseline;
+  gap: 0.35rem;
+  justify-content: center;
+  font-feature-settings: 'tnum';
 }
 
-.day-verdict {
-  font-size: 0.65rem;
+.temp-high {
+  font-size: 0.95rem;
   font-weight: 700;
+  color: var(--text-primary);
 }
 
-.day-prob {
-  font-size: 0.62rem;
+.temp-low {
+  font-size: 0.78rem;
+  font-weight: 500;
   color: var(--text-secondary);
 }
 
-.day-temp {
-  font-size: 0.72rem;
+/* Footer / Verdict */
+.day-card-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  width: 100%;
+}
+
+.day-verdict-pill {
+  font-size: 0.65rem;
   font-weight: 600;
-  color: var(--text-primary);
+  padding: 0.15rem 0.45rem;
+  border-radius: 12px;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+.verdict-clear {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.verdict-mostly-dry {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.verdict-showers {
+  background: #eff6ff;
+  color: #1e40af;
+}
+
+.verdict-rain-likely {
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+
+.verdict-heavy-rain {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+[data-theme="dark"] .verdict-clear {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fde68a;
+}
+
+[data-theme="dark"] .verdict-mostly-dry {
+  background: rgba(234, 179, 8, 0.18);
+  color: #fef08a;
+}
+
+[data-theme="dark"] .verdict-showers {
+  background: rgba(59, 130, 246, 0.2);
+  color: #bfdbfe;
+}
+
+[data-theme="dark"] .verdict-rain-likely {
+  background: rgba(37, 99, 235, 0.25);
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .verdict-heavy-rain {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+
+.day-rain-prob {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-feature-settings: 'tnum';
 }
 
 @media (max-width: 600px) {
   .day-card {
-    min-width: 88px;
-    max-width: 95px;
-    padding: 0.6rem 0.4rem;
-    border-radius: var(--radius-sm);
+    min-width: 98px;
+    max-width: 105px;
+    padding: 0.7rem 0.45rem;
+    gap: 0.35rem;
   }
 
-  .day-icon {
-    height: 24px;
+  .day-weekday {
+    font-size: 0.76rem;
+  }
+
+  .temp-high {
+    font-size: 0.88rem;
+  }
+
+  .temp-low {
+    font-size: 0.74rem;
+  }
+
+  .day-verdict-pill {
+    font-size: 0.6rem;
+    padding: 0.1rem 0.35rem;
   }
 }
 
@@ -131,3 +293,4 @@
     animation: none !important;
   }
 }
+

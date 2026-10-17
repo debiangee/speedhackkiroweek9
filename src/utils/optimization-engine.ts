@@ -1,3 +1,4 @@
+import { criticalHazard, hasCriticalData } from './trip-verdict';
 /**
  * Optimization Engine for Travel Decision Making
  * 
@@ -336,7 +337,7 @@ export function runOptimization(
 ): OptimizationResult {
   iterationCount++;
 
-  if (hourly.length === 0) {
+  if (hourly.length === 0 || hourly.some(h=>!hasCriticalData(h))) {
     return {
       goal,
       verdict: 'Waiting for weather data...',
@@ -357,11 +358,12 @@ export function runOptimization(
 
   // Confidence = average score of all hours
   const allScores = hourly.map((h) => scoreHour(h, goal));
-  const confidence = Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length);
+  const hazard = hourly.map(criticalHazard).find(Boolean);
+  const confidence = Math.min(hazard ? 39 : 100, Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length));
 
   const partialResult: Partial<OptimizationResult> = { bestWindow, avoidWindows };
   const suggestions = buildSuggestions(partialResult, hourly, goal);
-  const verdict = getVerdict(confidence, goal);
+  const verdict = hazard ? `${hazard}; consult official sources before planning.` : getVerdict(confidence, goal);
 
   return {
     goal,

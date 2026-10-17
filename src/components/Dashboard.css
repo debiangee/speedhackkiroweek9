@@ -174,11 +174,34 @@
   letter-spacing: -0.01em;
 }
 
+.section-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 12px;
+  background: var(--accent-light);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+}
+
+[data-theme="dark"] .section-badge {
+  background: rgba(96, 165, 250, 0.15);
+  color: #93c5fd;
+  border-color: rgba(96, 165, 250, 0.35);
+}
+
 .section-desc {
-  font-size: 0.75rem;
-  color: var(--text-muted);
+  font-size: 0.78rem;
+  color: var(--text-secondary);
   margin-bottom: 0.85rem;
   margin-left: 1.75rem;
+  line-height: 1.35;
 }
 
 /* === REGION ACTIONS BAR === */

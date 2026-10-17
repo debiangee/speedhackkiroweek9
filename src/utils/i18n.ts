@@ -5,7 +5,7 @@ export type Locale = 'en' | 'fil';
 const translations: Record<string, Record<Locale, string>> = {
   'app.title': { en: 'Team Weather Lang', fil: 'Team Weather Lang' },
   'app.subtitle': { en: 'Your PH Weather Companion', fil: 'Kasama Mo sa Panahon' },
-  'app.tagline': { en: 'Real-time forecasts, made simple', fil: 'Live forecast, simple lang' },
+  'app.tagline': { en: 'Forecasts for everyday plans', fil: 'Forecast para sa araw-araw' },
   'dashboard.loading': { en: 'Fetching live weather data...', fil: 'Kinukuha ang live na datos ng panahon...' },
   'dashboard.loadingSub': { en: 'Getting forecast from Open-Meteo', fil: 'Kumukuha ng forecast mula sa Open-Meteo' },
   'dashboard.error': { en: 'Could not load weather data', fil: 'Hindi makuha ang datos ng panahon' },
@@ -41,11 +41,12 @@ export function t(key: string, locale: Locale): string {
 }
 
 export function getStoredLocale(): Locale {
-  const stored = localStorage.getItem('ulanba-locale');
+  let stored: string | null = null;
+  try { stored = localStorage.getItem('ulanba-locale'); } catch { /* optional */ }
   if (stored === 'fil' || stored === 'en') return stored;
   return 'en';
 }
 
 export function setStoredLocale(locale: Locale): void {
-  localStorage.setItem('ulanba-locale', locale);
+  try { localStorage.setItem('ulanba-locale', locale); } catch { /* optional */ }
 }

@@ -15,7 +15,7 @@ interface Recommendation {
   severity: 'safe' | 'caution' | 'warning' | 'danger';
 }
 
-function getUmbrellaRec(hourly: HourlyData[]): Recommendation {
+export function getUmbrellaRec(hourly: HourlyData[]): Recommendation {
   const maxProb = Math.max(...hourly.map((h) => h.precipitation_probability));
   const avgProb = hourly.reduce((s, h) => s + h.precipitation_probability, 0) / hourly.length;
 
@@ -55,47 +55,11 @@ function getUmbrellaRec(hourly: HourlyData[]): Recommendation {
   };
 }
 
-function getFloodRisk(hourly: HourlyData[]): Recommendation {
-  const totalRain = hourly.reduce((s, h) => s + h.precipitation, 0);
-  const maxHourlyRain = Math.max(...hourly.map((h) => h.precipitation));
-
-  if (totalRain < 10 && maxHourlyRain < 5) {
-    return {
-      id: 'flood',
-      icon: <CheckCircleIcon size={20} color="#2e7d32" />,
-      title: 'No flood risk',
-      description: 'Rainfall too light to cause flooding.',
-      severity: 'safe',
-    };
-  }
-  if (totalRain < 30 && maxHourlyRain < 15) {
-    return {
-      id: 'flood',
-      icon: <DropletIcon size={20} color="#f57c00" />,
-      title: 'Low flood risk',
-      description: 'Minor puddles possible in low-lying areas. Avoid underpasses.',
-      severity: 'caution',
-    };
-  }
-  if (totalRain < 60) {
-    return {
-      id: 'flood',
-      icon: <DropletIcon size={20} color="#e65100" />,
-      title: 'Moderate flood risk',
-      description: 'Streets may flood in known flood-prone areas. Plan alternate routes.',
-      severity: 'warning',
-    };
-  }
-  return {
-    id: 'flood',
-    icon: <AlertCircleIcon size={20} color="#c62828" />,
-    title: 'High flood risk',
-    description: 'Heavy rainfall expected. Avoid low areas and watch for flood advisories.',
-    severity: 'danger',
-  };
+export function getFloodRisk(_hourly: HourlyData[]): Recommendation {
+  return { id: 'flood', icon: <DropletIcon size={20} />, title: 'Flood conditions unknown', description: 'Rain forecasts alone cannot establish flood risk. Check PAGASA and local DRRMO/LGU information; never cross floodwater.', severity: 'caution' };
 }
 
-function getMotorcycleConditions(hourly: HourlyData[]): Recommendation {
+export function getMotorcycleConditions(hourly: HourlyData[]): Recommendation {
   const avgProb = hourly.reduce((s, h) => s + h.precipitation_probability, 0) / hourly.length;
   const maxWind = Math.max(...hourly.map((h) => h.wind_speed));
   const maxRain = Math.max(...hourly.map((h) => h.precipitation));
@@ -105,7 +69,7 @@ function getMotorcycleConditions(hourly: HourlyData[]): Recommendation {
       id: 'motorcycle',
       icon: <CheckCircleIcon size={20} color="#2e7d32" />,
       title: 'Good riding conditions',
-      description: 'Roads should be dry. Safe for motorcycles and bikes.',
+      description: 'Lower forecast rain and wind. Road surfaces and riding safety are not verified.',
       severity: 'safe',
     };
   }
@@ -136,7 +100,7 @@ function getMotorcycleConditions(hourly: HourlyData[]): Recommendation {
   };
 }
 
-function getWindAlert(hourly: HourlyData[]): Recommendation | null {
+export function getWindAlert(hourly: HourlyData[]): Recommendation | null {
   const maxWind = Math.max(...hourly.map((h) => h.wind_speed));
 
   if (maxWind < 30) return null;
@@ -145,15 +109,15 @@ function getWindAlert(hourly: HourlyData[]): Recommendation | null {
       id: 'wind',
       icon: <WindIcon size={20} color="#f57c00" />,
       title: 'Moderate winds',
-      description: `Gusts up to ${Math.round(maxWind)} km/h. Secure loose items outdoors.`,
+      description: `Sustained wind up to ${Math.round(maxWind)} km/h. Secure loose items outdoors.`,
       severity: 'caution',
     };
   }
   return {
     id: 'wind',
     icon: <WindIcon size={20} color="#c62828" />,
-    title: 'Strong wind warning',
-    description: `Gusts up to ${Math.round(maxWind)} km/h. Avoid open areas and tall structures.`,
+    title: 'Strong forecast wind',
+    description: `Sustained wind up to ${Math.round(maxWind)} km/h. Avoid open areas and tall structures.`,
     severity: 'danger',
   };
 }
@@ -185,7 +149,7 @@ export function SmartRecommendations({ hourly }: Props) {
             <p className="rec-desc">{rec.description}</p>
           </div>
           <div className={`rec-badge rec-badge-${rec.severity}`}>
-            {rec.severity === 'safe' && 'Safe'}
+            {rec.severity === 'safe' && 'Lower impact'}
             {rec.severity === 'caution' && 'Caution'}
             {rec.severity === 'warning' && 'Warning'}
             {rec.severity === 'danger' && 'Danger'}

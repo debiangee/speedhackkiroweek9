@@ -1,4 +1,5 @@
-import { useEvacuationCenters, EvacuationCenter } from '../hooks/useEvacuationCenters';
+import { useEvacuationCenters, type EvacuationCenter } from '../hooks/useEvacuationCenters';
+import { ShieldIcon, AlertCircleIcon, MapPinIcon } from './Icons';
 import './EvacuationPanel.css';
 
 interface EvacuationPanelProps {
@@ -14,48 +15,47 @@ const TYPE_LABELS: Record<EvacuationCenter['type'], string> = {
   civic: 'Civic',
 };
 
-export default function EvacuationPanel({ lat, lon, region }: EvacuationPanelProps) {
+export function EvacuationPanel({ lat, lon, region }: EvacuationPanelProps) {
   const { loading, error, centers, searchRadius } = useEvacuationCenters(lat, lon);
 
   const displayCenters = centers.slice(0, 10);
 
   return (
-    <section className="evacuation-panel" aria-label="Evacuation Centers">
+    <section className="evacuation-panel" aria-label="Mapped facilities — status unverified">
       <header className="evacuation-header">
         <span className="evacuation-icon" aria-hidden="true">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-          </svg>
+          <ShieldIcon size={20} color="var(--accent)" />
         </span>
         <div className="evacuation-header-text">
-          <h3 className="evacuation-title">Evacuation Centers</h3>
+          <h3 className="evacuation-title">Mapped facilities — status unverified</h3>
           <p className="evacuation-subtitle">
-            Within {searchRadius}km of your location
+            Within {searchRadius}km of the selected forecast point
             {region && <span className="evacuation-region"> — {region}</span>}
           </p>
         </div>
       </header>
 
+      <p>OpenStreetMap results may include general shelters, civic buildings and assembly points. These are not verified operational evacuation centers. Confirm opening, capacity, accessibility and suitability with your local DRRMO/LGU before traveling.</p>
       {loading && <EvacuationSkeleton />}
 
       {error && (
         <div className="evacuation-error" role="alert">
-          <span className="evacuation-error-icon material-symbols-rounded" aria-hidden="true">warning</span>
+          <AlertCircleIcon size={18} color="#dc2626" className="evacuation-error-icon" />
           <p className="evacuation-error-text">
-            Unable to load evacuation centers. {error}
+            Unable to load mapped facilities. {error}
           </p>
         </div>
       )}
 
       {!loading && !error && displayCenters.length === 0 && (
         <div className="evacuation-empty">
-          <span className="evacuation-empty-icon material-symbols-rounded" aria-hidden="true">location_on</span>
-          <p className="evacuation-empty-text">No evacuation centers found nearby.</p>
+          <MapPinIcon size={20} color="var(--text-muted)" className="evacuation-empty-icon" />
+          <p className="evacuation-empty-text">No mapped facilities found within {searchRadius}km.</p>
         </div>
       )}
 
       {!loading && !error && displayCenters.length > 0 && (
-        <ul className="evacuation-list" aria-label="List of evacuation centers">
+        <ul className="evacuation-list" aria-label="List of mapped facilities">
           {displayCenters.map((center, index) => (
             <li
               key={center.id}
@@ -96,7 +96,7 @@ export default function EvacuationPanel({ lat, lon, region }: EvacuationPanelPro
 
 function EvacuationSkeleton() {
   return (
-    <div className="evacuation-skeleton" aria-label="Loading evacuation centers">
+    <div className="evacuation-skeleton" aria-label="Loading mapped facilities">
       {[0, 1, 2].map((i) => (
         <div key={i} className="evacuation-skeleton-card" aria-hidden="true">
           <div className="evacuation-skeleton-icon" />
@@ -151,3 +151,5 @@ function CenterIcon({ type }: { type: EvacuationCenter['type'] }) {
       );
   }
 }
+
+export default EvacuationPanel;

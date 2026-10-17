@@ -1,27 +1,12 @@
+import { requestForecast } from '../services/forecast-provider';
+import { manilaDate } from '../utils/time';
+import { REGION_COORDS } from '../utils/locations';
 import { useState, useEffect, useMemo } from 'react';
 import { DropletIcon } from './Icons';
 import './RainHeatmap.css';
 
 // Region center coordinates for API calls
-const REGION_COORDS: Record<string, { lat: number; lon: number }> = {
-  'NCR': { lat: 14.5995, lon: 120.9842 },
-  'CAR': { lat: 16.4023, lon: 120.596 },
-  'Ilocos': { lat: 17.5747, lon: 120.3869 },
-  'Cagayan Valley': { lat: 17.6132, lon: 121.727 },
-  'Central Luzon': { lat: 15.145, lon: 120.5887 },
-  'CALABARZON': { lat: 14.1, lon: 121.3 },
-  'MIMAROPA': { lat: 9.7392, lon: 118.7353 },
-  'Bicol': { lat: 13.1391, lon: 123.7438 },
-  'Western Visayas': { lat: 10.7202, lon: 122.5621 },
-  'Central Visayas': { lat: 10.3157, lon: 123.8854 },
-  'Eastern Visayas': { lat: 11.25, lon: 125.0 },
-  'Zamboanga Peninsula': { lat: 6.9214, lon: 122.079 },
-  'Northern Mindanao': { lat: 8.4542, lon: 124.6319 },
-  'Davao': { lat: 7.1907, lon: 125.4553 },
-  'SOCCSKSARGEN': { lat: 6.5, lon: 124.85 },
-  'Caraga': { lat: 8.9475, lon: 125.5406 },
-  'BARMM': { lat: 7.2, lon: 124.23 },
-};
+
 
 // Map region names from GeoJSON to our data keys
 const REGION_NAME_MAP: Record<string, string> = {
@@ -46,8 +31,8 @@ const REGION_NAME_MAP: Record<string, string> = {
 
 interface RegionRain {
   region: string;
-  rainMm: number;
-  probability: number;
+  rainMm: number | null;
+  probability: number | null;
 }
 
 interface GeoFeature {
@@ -135,15 +120,11 @@ export function RainHeatmap() {
         const batch = entries.slice(i, i + 4);
         const promises = batch.map(async ([region, coords]) => {
           try {
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&hourly=precipitation,precipitation_probability&timezone=Asia/Manila&forecast_days=1`;
-            const res = await fetch(url);
-            if (!res.ok) return { region, rainMm: 0, probability: 0 };
-            const json = await res.json();
-            const totalRain = (json.hourly?.precipitation || []).reduce((s: number, v: number) => s + (v || 0), 0);
-            const avgProb = (json.hourly?.precipitation_probability || []).reduce((s: number, v: number) => s + (v || 0), 0) / 24;
-            return { region, rainMm: Math.round(totalRain * 10) / 10, probability: Math.round(avgProb) };
+            const forecast = await requestForecast(coords);
+            const day = forecast.daily.find(d => d.date === manilaDate());
+            return { region, rainMm: day?.total_rain ?? null, probability: day?.avg_prob ?? null };
           } catch {
-            return { region, rainMm: 0, probability: 0 };
+            return { region, rainMm: null, probability: null };
           }
         });
 
@@ -187,6 +168,7 @@ export function RainHeatmap() {
 
   return (
     <div className="rain-heatmap">
+      <p>Gray regions: data unavailable. Point forecasts represent selected regional reference locations, not uniform conditions across a region.</p>
       {/* GeoJSON Map */}
       <div className="heatmap-map">
         <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} className="heatmap-svg">
@@ -198,7 +180,7 @@ export function RainHeatmap() {
             const geoName = feature.properties.REGION;
             const regionKey = REGION_NAME_MAP[geoName] || geoName;
             const regionRain = rainByRegion.get(regionKey);
-            const rainMm = regionRain?.rainMm ?? 0;
+            const rainMm = regionRain?.rainMm ?? null;
             const pathData = geometryToPath(feature.geometry);
             const isHovered = hoveredRegion === regionKey;
 
@@ -206,10 +188,13 @@ export function RainHeatmap() {
               <path
                 key={geoName}
                 d={pathData}
-                fill={getRainFill(rainMm)}
-                stroke={isHovered ? getRainColor(rainMm) : 'rgba(255,255,255,0.25)'}
+                fill={rainMm === null ? 'var(--border)' : getRainFill(rainMm)}
+                stroke={isHovered && rainMm !== null ? getRainColor(rainMm) : 'rgba(255,255,255,0.25)'}
                 strokeWidth={isHovered ? 1.5 : 0.5}
                 className="heatmap-region-path"
+                tabIndex={0}
+                aria-label={`${regionKey}: ${rainMm === null ? 'data unavailable' : `${rainMm} mm forecast rain`}`}
+                onFocus={() => setHoveredRegion(regionKey)}
                 onMouseEnter={() => setHoveredRegion(regionKey)}
                 onMouseLeave={() => setHoveredRegion(null)}
               />
@@ -219,12 +204,12 @@ export function RainHeatmap() {
           {/* Rain amount labels */}
           {data.map((d) => {
             const coords = REGION_COORDS[d.region];
-            if (!coords || d.rainMm === 0) return null;
+            if (!coords || d.rainMm === null || d.rainMm === 0) return null;
             const x = projectX(coords.lon);
             const y = projectY(coords.lat);
             return (
               <g key={d.region + '-label'}>
-                <circle cx={x} cy={y} r={10} fill={getRainColor(d.rainMm)} opacity={0.85} />
+                <circle cx={x} cy={y} r={10} fill={getRainColor(d.rainMm ?? 0)} opacity={0.85} />
                 <text x={x} y={y + 3} textAnchor="middle" fontSize="6.5" fill="#fff" fontWeight="700">
                   {d.rainMm.toFixed(0)}
                 </text>
@@ -237,7 +222,7 @@ export function RainHeatmap() {
         {hoveredData && (
           <div className="heatmap-tooltip">
             <strong>{hoveredData.region}</strong>
-            <span>{hoveredData.rainMm}mm · {hoveredData.probability}% chance</span>
+            <span>{hoveredData.rainMm === null ? 'Data unavailable' : `${hoveredData.rainMm}mm · ${hoveredData.probability}% mean hourly probability`}</span>
           </div>
         )}
       </div>
@@ -256,11 +241,11 @@ export function RainHeatmap() {
 
       {/* Top regions list */}
       <div className="heatmap-list">
-        {[...data].sort((a, b) => b.rainMm - a.rainMm).slice(0, 5).map((d) => (
+        {[...data].sort((a, b) => (b.rainMm ?? -1) - (a.rainMm ?? -1)).slice(0, 5).map((d) => (
           <div key={d.region} className="heatmap-row">
-            <DropletIcon size={12} color={getRainColor(d.rainMm)} />
+            <DropletIcon size={12} color={getRainColor(d.rainMm ?? 0)} />
             <span className="heatmap-region">{d.region}</span>
-            <span className="heatmap-val">{d.rainMm}mm</span>
+            <span className="heatmap-val">{d.rainMm === null ? 'Unavailable' : `${d.rainMm}mm`}</span>
             <span className="heatmap-prob">{d.probability}%</span>
           </div>
         ))}

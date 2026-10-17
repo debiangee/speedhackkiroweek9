@@ -1,3 +1,5 @@
+import { useClock } from '../hooks/useClock';
+import { manilaHour } from '../utils/time';
 import { useMemo, useState } from 'react';
 import type { HourlyData, DailySummary } from '../hooks/useWeatherData';
 import { useAirQuality, getAqiBonus } from '../hooks/useAirQuality';
@@ -5,15 +7,13 @@ import {
   computeDaySurge,
   findBestWindow,
   findPeakWindow,
-  computeTransportImpact,
-  generateRecommendations,
   classifySurgeLevel,
+  formatHour,
 } from '../utils/surge-engine';
-import type { SurgeResult } from '../utils/surge-engine';
-import { SurgeAlert } from './SurgeAlert';
+import type { TransportImpact, SurgeResult } from '../utils/surge-engine';
 import { SurgeTimeline } from './SurgeTimeline';
 import { TransportModeCards } from './TransportModeCards';
-import { SurgeRecommendations } from './SurgeRecommendations';
+import { StarIcon, CloudRainIcon, CarIcon, BanknoteIcon, WavesIcon } from './Icons';
 import './TransportSurgePredictor.css';
 
 interface Props {
@@ -24,8 +24,9 @@ interface Props {
 }
 
 export function TransportSurgePredictor({ hourly, cityCoords }: Props) {
+  useClock();
   const [selectedDayIdx, setSelectedDayIdx] = useState(0);
-  const currentHour = new Date().getHours();
+  const currentHour = manilaHour();
 
   // Fetch air quality (optional enhancement)
   const { data: aqData } = useAirQuality(cityCoords);
@@ -66,23 +67,15 @@ export function TransportSurgePredictor({ hourly, cityCoords }: Props) {
   const bestWindow = useMemo(() => findBestWindow(surgeResults), [surgeResults]);
   const peakWindow = useMemo(() => findPeakWindow(surgeResults), [surgeResults]);
 
-  // Transport impact for current/first visible hour
-  const activeHourIdx = selectedDayIdx === 0
-    ? surgeResults.findIndex((r) => r.hour === currentHour)
-    : 0;
+  const activeHourIdx = selectedDayIdx === 0 ? surgeResults.findIndex(r => r.hour === currentHour) : 0;
   const activeResult = surgeResults[Math.max(0, activeHourIdx)];
   const activeHourly = selectedDayHourly[Math.max(0, activeHourIdx)];
-
-  const transportImpacts = useMemo(() => {
-    if (!activeResult || !activeHourly) return [];
-    return computeTransportImpact(activeHourly, activeResult.score, activeResult.level);
-  }, [activeResult, activeHourly]);
-
-  // Recommendations (only for today)
-  const recommendations = useMemo(() => {
-    if (selectedDayIdx !== 0 || selectedDayHourly.length === 0) return [];
-    return generateRecommendations(surgeResults, currentHour, selectedDayHourly);
-  }, [surgeResults, currentHour, selectedDayHourly, selectedDayIdx]);
+  const transportImpacts: TransportImpact[] = activeHourly ? [
+    { mode: 'grab', label: 'Car / taxi', status: 'Fares and availability unknown', severity: 'moderate' as const, tip: 'Check the operator directly. This app has no traffic, fare or driver feed.' },
+    { mode: 'angkas', label: 'Motorcycle', status: 'Weather exposure', severity: 'moderate' as const, tip: `Forecast wind ${activeHourly.wind_speed} km/h, rain ${activeHourly.precipitation} mm. Road and riding conditions are unverified.` },
+    { mode: 'jeepney', label: 'Jeepney / bus', status: 'Service status unknown', severity: 'moderate' as const, tip: 'Confirm schedules and disruptions with the operator or local authorities.' },
+    { mode: 'walking', label: 'Walking / cycling', status: 'Weather exposure', severity: 'moderate' as const, tip: `Forecast rain probability ${activeHourly.precipitation_probability}%. Check local conditions before leaving.` },
+  ] : [];
 
   // Multi-day overview: peak score per day
   const dayOverview = useMemo(() => {
@@ -107,7 +100,38 @@ export function TransportSurgePredictor({ hourly, cityCoords }: Props) {
     ? dayOverview.reduce((best, day, i) => day.peakScore < dayOverview[best].peakScore ? i : best, 0)
     : 0;
 
+  function renderFactorIcon(factor: SurgeResult['topFactor']) {
+    switch (factor) {
+      case 'weather':
+        return <CloudRainIcon size={14} color="currentColor" />;
+      case 'rush_hour':
+        return <CarIcon size={14} color="currentColor" />;
+      case 'payday':
+        return <BanknoteIcon size={14} color="currentColor" />;
+      case 'sustained_rain':
+        return <WavesIcon size={14} color="currentColor" />;
+      default:
+        return <CloudRainIcon size={14} color="currentColor" />;
+    }
+  }
+
+  function formatFactorName(factor: SurgeResult['topFactor']) {
+    switch (factor) {
+      case 'weather':
+        return 'Severe Weather & Rain';
+      case 'rush_hour':
+        return 'Peak Commute Rush Hour';
+      case 'payday':
+        return 'Payday Demand Spike';
+      case 'sustained_rain':
+        return 'Sustained Heavy Precipitation';
+      default:
+        return 'Weather Conditions';
+    }
+  }
+
   if (hourly.length === 0) return null;
+
 
   return (
     <div className="surge-predictor">
@@ -123,14 +147,55 @@ export function TransportSurgePredictor({ hourly, cityCoords }: Props) {
           >
             <span className={`day-dot level-dot-${day.level.toLowerCase()}`} />
             <span className="day-chip-label">{day.dayLabel}</span>
-            {i === bestDayIdx && <span className="best-badge">⭐</span>}
+            {i === bestDayIdx && (
+              <span className="best-badge" title="Lowest modeled demand score this week">
+                <StarIcon size={12} color="#f59e0b" />
+              </span>
+            )}
           </button>
         ))}
       </div>
 
-      {/* Pre-Surge Alert (today only) */}
-      {selectedDayIdx === 0 && (
-        <SurgeAlert results={surgeResults} currentHour={currentHour} />
+      {/* Hero Surge Multiplier Card — Non-Technical Friendly */}
+      {activeResult && (
+        <div className={`surge-hero-card surge-hero-${activeResult.level.toLowerCase()}`}>
+          <div className="surge-hero-header">
+            <div className="surge-hero-caption-group">
+              <span className="surge-hero-title">
+                {selectedDayIdx === 0 ? 'FORECAST DEMAND INDICATOR' : 'FORECAST DEMAND INDICATOR'}
+              </span>
+              <span className="surge-hero-time">({formatHour(activeResult.hour)})</span>
+            </div>
+            <span className={`surge-level-pill level-pill-${activeResult.level.toLowerCase()}`}>
+              <span className="level-pulse-dot" aria-hidden="true" />
+              {activeResult.level} modeled demand
+            </span>
+          </div>
+
+          <div className="surge-hero-body">
+            <div className="surge-multiplier-group">
+              <div className="surge-number-box">
+                <span className="surge-multiplier-number">
+                  {activeResult.score}/100
+                </span>
+                <span className="surge-rate-badge">Heuristic score, not a price</span>
+              </div>
+              <div className="surge-multiplier-meta">
+                <p className="surge-plain-explanation">
+                  Weather and calendar inputs only; not calibrated against actual demand. No live fares, traffic or driver availability.
+                </p>
+              </div>
+            </div>
+
+            <div className="surge-top-factor">
+              <span className="factor-label">Largest modeled input:</span>
+              <span className="factor-pill">
+                <span className="factor-icon" aria-hidden="true">{renderFactorIcon(activeResult.topFactor)}</span>
+                <span className="factor-name">{formatFactorName(activeResult.topFactor)}</span>
+              </span>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Hourly Surge Timeline */}
@@ -143,16 +208,13 @@ export function TransportSurgePredictor({ hourly, cityCoords }: Props) {
 
       {/* Transport Mode Breakdown */}
       {transportImpacts.length > 0 && (
-        <TransportModeCards impacts={transportImpacts} />
-      )}
-
-      {/* Smart Booking Recommendations (today only) */}
-      {recommendations.length > 0 && (
-        <div className="surge-recs-section">
-          <h4 className="surge-subsection-title">💡 Smart Booking Tips</h4>
-          <SurgeRecommendations recommendations={recommendations} />
+        <div className="surge-modes-section">
+          <h4 className="surge-subsection-title">Transport planning context</h4>
+          <TransportModeCards impacts={transportImpacts} />
         </div>
       )}
+
+
     </div>
   );
 }

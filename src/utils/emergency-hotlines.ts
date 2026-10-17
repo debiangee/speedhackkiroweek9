@@ -204,11 +204,11 @@ export function getHotlinesForRegion(regionId: string): {
  */
 export function getHotlineTypeLabel(type: Hotline['type']): string {
   switch (type) {
-    case 'disaster': return '🌀 Disaster';
-    case 'police': return '🚔 Police';
-    case 'fire': return '🚒 Fire';
-    case 'medical': return '🏥 Medical';
-    case 'rescue': return '🚑 Rescue';
-    case 'general': return '📞 Emergency';
+    case 'disaster': return 'Disaster';
+    case 'police': return 'Police';
+    case 'fire': return 'Fire';
+    case 'medical': return 'Medical';
+    case 'rescue': return 'Rescue';
+    case 'general': return 'Emergency';
   }
 }

@@ -1,18 +1,21 @@
+import { readPreference, writePreference } from '../utils/storage';
+import { REGIONS } from '../utils/regions';
 import { useState, useCallback } from 'react';
 
 const STORAGE_KEY = 'ph-rain-favorites';
 
 function loadFavorites(): string[] {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
+    const stored = readPreference(STORAGE_KEY);
+    const parsed: unknown = stored ? JSON.parse(stored) : [];
+    return Array.isArray(parsed) ? parsed.filter((r): r is string => typeof r === 'string' && REGIONS.some(region => region.id === r)) : [];
   } catch {
     return [];
   }
 }
 
 function saveFavorites(favorites: string[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(favorites));
+  writePreference(STORAGE_KEY, JSON.stringify(favorites));
 }
 
 export function useFavorites() {

@@ -1,404 +1,126 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense, type ReactNode } from 'react';
 import { useWeatherData } from '../hooks/useWeatherData';
-import { useFavorites } from '../hooks/useFavorites';
+import { useSavedLocations } from '../hooks/useSavedLocations';
+import { forecastContext, forecastUrl } from '../utils/forecast-context';
+import { readPreference, writePreference } from '../utils/storage';
 import { useGeolocation } from '../hooks/useGeolocation';
-import { PhilippineMap } from './PhilippineMap';
+import { useClock } from '../hooks/useClock';
+import { useLocale } from '../hooks/useLocale';
 import { RegionSearch } from './RegionSearch';
 import { LocationDetect } from './LocationDetect';
-import { FavoriteRegions } from './FavoriteRegions';
-import { TyphoonBanner } from './TyphoonBanner';
-import { WeatherAlerts } from './WeatherAlerts';
-import { BestTimeToGo } from './BestTimeToGo';
-import { SmartRecommendations } from './SmartRecommendations';
-import { OptimizationPanel } from './OptimizationPanel';
+import { WeatherSignalPanel } from './WeatherSignalPanel';
 import { EmergencyHotlines } from './EmergencyHotlines';
 import { DayCards } from './DayCards';
 import { HourlyTimeline } from './HourlyTimeline';
-import { TravelAdvice } from './TravelAdvice';
 import { CitySelector } from './CitySelector';
 import { StarButton } from './StarButton';
 import { ShareForecast } from './ShareForecast';
 import { TripGoChecker } from './TripGoChecker';
-import { WeekSummaryCard } from './WeekSummaryCard';
 import { ActivityPlanner } from './ActivityPlanner';
-import { RainHeatmap } from './RainHeatmap';
-import { WeatherRiskMap } from './WeatherRiskMap';
-import { CalendarIcon, ClockIcon, TrendingUpIcon, SunIcon, AlertCircleIcon, MapPinIcon, DropletIcon } from './Icons';
+import { BestTimeToGo } from './BestTimeToGo';
+import { SmartRecommendations } from './SmartRecommendations';
+import { OptimizationPanel } from './OptimizationPanel';
 import { ErrorBoundary } from './ErrorBoundary';
 import { SkeletonLoader } from './SkeletonLoader';
-import { getRegionLabel } from '../utils/regions';
-import { getCityCoords } from '../utils/cities';
+import { CloudRainIcon, ThermometerIcon, WindIcon, DropletIcon } from './Icons';
+import { resolveLocation } from '../utils/locations';
+import { manilaDate, currentForecastIndex, remainingForecast } from '../utils/time';
 import './Dashboard.css';
-
-// Lazy load heavy chart components
-const RainChart = lazy(() => import('./RainChart').then((m) => ({ default: m.RainChart })));
-const WeatherChatbot = lazy(() => import('./WeatherChatbot').then((m) => ({ default: m.WeatherChatbot })));
-const CompareRegions = lazy(() => import('./CompareRegions').then((m) => ({ default: m.CompareRegions })));
-const HistoricalComparison = lazy(() => import('./HistoricalComparison').then((m) => ({ default: m.HistoricalComparison })));
+import './ModernDashboard.css';
+const RainChart = lazy(() => import('./RainChart').then(m => ({default:m.RainChart})));
+const WeatherChatbot = lazy(() => import('./WeatherChatbot').then(m => ({default:m.WeatherChatbot})));
+const CompareRegions = lazy(() => import('./CompareRegions').then(m => ({default:m.CompareRegions})));
+const HistoricalComparison = lazy(() => import('./HistoricalComparison').then(m => ({default:m.HistoricalComparison})));
 const TransportSurgePredictor = lazy(() => import('./TransportSurgePredictor'));
+const WeatherReality = lazy(() => import('./WeatherReality/WeatherReality').then(m => ({default:m.WeatherReality})));
+const WeatherRiskMap = lazy(() => import('./WeatherRiskMap').then(m => ({default:m.WeatherRiskMap})));
+const RainHeatmap = lazy(() => import('./RainHeatmap').then(m => ({default:m.RainHeatmap})));
+const PhilippineMap = lazy(() => import('./PhilippineMap').then(m => ({default:m.PhilippineMap})));
+const EvacuationPanel = lazy(() => import('./EvacuationPanel').then(m => ({default:m.EvacuationPanel})));
 
-// Region coordinates for historical comparison
-const REGION_COORDS: Record<string, { lat: number; lon: number }> = {
-  'NCR': { lat: 14.5995, lon: 120.9842 },
-  'CAR': { lat: 16.4023, lon: 120.596 },
-  'Ilocos': { lat: 17.5747, lon: 120.3869 },
-  'Cagayan Valley': { lat: 17.6132, lon: 121.727 },
-  'Central Luzon': { lat: 15.145, lon: 120.5887 },
-  'CALABARZON': { lat: 14.1, lon: 121.3 },
-  'MIMAROPA': { lat: 9.7392, lon: 118.7353 },
-  'Bicol': { lat: 13.1391, lon: 123.7438 },
-  'Western Visayas': { lat: 10.7202, lon: 122.5621 },
-  'Central Visayas': { lat: 10.3157, lon: 123.8854 },
-  'Eastern Visayas': { lat: 11.25, lon: 125.0 },
-  'Zamboanga Peninsula': { lat: 6.9214, lon: 122.079 },
-  'Northern Mindanao': { lat: 8.4542, lon: 124.6319 },
-  'Davao': { lat: 7.1907, lon: 125.4553 },
-  'SOCCSKSARGEN': { lat: 6.5, lon: 124.85 },
-  'Caraga': { lat: 8.9475, lon: 125.5406 },
-  'BARMM': { lat: 7.2, lon: 124.23 },
-};
-
+function DeferredDetails({title, children}: {title: ReactNode; children: ReactNode}) {
+  const [open, setOpen] = useState(false);
+  return <details onToggle={e => setOpen(e.currentTarget.open)}><summary>{title}</summary>{open && children}</details>;
+}
+function weatherLabel(code: number, fil: boolean): string {
+  if (code >= 95) return fil ? 'May thunderstorm sa forecast' : 'Thunderstorm forecast';
+  if (code >= 51 && code <= 82) return fil ? 'May ulan sa forecast' : 'Rain in the forecast';
+  if (code >= 45 && code <= 48) return fil ? 'Maulap na may hamog' : 'Foggy conditions';
+  if (code <= 1) return fil ? 'Maaliwalas' : 'Mostly clear';
+  return fil ? 'Maulap' : 'Cloudy';
+}
 export function Dashboard() {
-  const [selectedRegion, setSelectedRegion] = useState('NCR');
-  const [selectedCity, setSelectedCity] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const now = useClock();
+  const { locale } = useLocale();
+  const text = (en: string, fil: string) => locale === 'fil' ? fil : en;
+  const [initial] = useState(() => forecastContext(window.location.search, new Date(), readPreference('weather-lang-current-location')));
+  const [selectedRegion, setSelectedRegion] = useState(initial.location.region);
+  const [selectedCity, setSelectedCity] = useState<string | null>(initial.location.source === 'catalog-city' ? initial.location.name : null);
+  const [selectedDate, setSelectedDate] = useState(initial.date);
   const [compareMode, setCompareMode] = useState(false);
-  const { favorites, toggleFavorite, removeFavorite, isFavorite } = useFavorites();
+  const [mapTool, setMapTool] = useState('');
+  const [facilities, setFacilities] = useState(false);
+  const [assistant, setAssistant] = useState(false);
+  const saved = useSavedLocations();
+  const [lite, setLite] = useState(() => readPreference('weather-lang-lite') === 'true');
   const { detecting, error: geoError, detect } = useGeolocation();
-
-  // Get city coordinates if a city is selected, otherwise use region center
-  const cityCoords = selectedCity ? getCityCoords(selectedRegion, selectedCity) : null;
-  const { loading, error, hourly, daily, lastUpdated, refetch } = useWeatherData(selectedRegion, cityCoords);
-
-  function handleRegionSelect(region: string, city?: string) {
-    setSelectedRegion(region);
-    setSelectedCity(city || null);
-  }
-
-  async function handleDetectLocation() {
-    const result = await detect();
-    if (result) {
-      setSelectedRegion(result.region);
-      setSelectedCity(result.city);
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="dashboard">
-        <TyphoonBanner />
-        <div className="dashboard-search">
-          <RegionSearch selected={selectedRegion} onSelect={handleRegionSelect} />
-          <LocationDetect detecting={detecting} onDetect={handleDetectLocation} error={geoError} />
-        </div>
-        {favorites.length > 0 && (
-          <FavoriteRegions favorites={favorites} selected={selectedRegion} onSelect={handleRegionSelect} onRemove={removeFavorite} />
-        )}
-        <div className="dashboard-layout">
-          <aside className="dashboard-sidebar">
-            <PhilippineMap selected={selectedRegion} onSelect={handleRegionSelect} />
-          </aside>
-          <section className="dashboard-content">
-            <SkeletonLoader />
-          </section>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="dashboard">
-        <TyphoonBanner />
-        <div className="dashboard-search">
-          <RegionSearch selected={selectedRegion} onSelect={handleRegionSelect} />
-          <LocationDetect detecting={detecting} onDetect={handleDetectLocation} error={geoError} />
-        </div>
-        <div className="dashboard-layout">
-          <aside className="dashboard-sidebar">
-            <PhilippineMap selected={selectedRegion} onSelect={handleRegionSelect} />
-          </aside>
-          <section className="dashboard-content">
-            <div className="error-state">
-              <p>Could not load weather data</p>
-              <span className="error-detail">{error}</span>
-              <button className="retry-btn" onClick={refetch}>Try Again</button>
-            </div>
-          </section>
-        </div>
-      </div>
-    );
-  }
-
-  const todayHourly = hourly.filter((h) => h.date === selectedDate);
-  const dateLabel = new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-PH', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  });
-
-  // Compute current conditions for weather alerts
-  const currentHour = new Date().getHours();
-  const recentHourly = todayHourly.filter((h) => Math.abs(h.hour - currentHour) <= 2);
-  const maxWind = recentHourly.length > 0 ? Math.max(...recentHourly.map((h) => h.wind_speed)) : 0;
-  const maxRain = recentHourly.length > 0 ? recentHourly.reduce((s, h) => s + h.precipitation, 0) : 0;
-
-  const regionCoords = REGION_COORDS[selectedRegion] || REGION_COORDS['NCR'];
-
-  return (
-    <div className="dashboard">
-      <TyphoonBanner />
-
-      {/* Real-time weather alerts */}
-      <WeatherAlerts windSpeed={maxWind} rainMm={maxRain} region={selectedRegion} />
-
-      <div className="dashboard-search">
-        <RegionSearch selected={selectedRegion} onSelect={handleRegionSelect} />
-        <LocationDetect detecting={detecting} onDetect={handleDetectLocation} error={geoError} />
-      </div>
-
-      {favorites.length > 0 && (
-        <FavoriteRegions
-          favorites={favorites}
-          selected={selectedRegion}
-          onSelect={handleRegionSelect}
-          onRemove={removeFavorite}
-        />
-      )}
-
-      <div className="dashboard-layout">
-        <aside className="dashboard-sidebar">
-          <PhilippineMap selected={selectedRegion} onSelect={handleRegionSelect} />
-
-          {/* Rain Heatmap */}
-          <div className="section-card sidebar-card">
-            <div className="section-header">
-              <DropletIcon size={16} color="var(--accent)" />
-              <h3 className="section-title">Rain Heatmap</h3>
-            </div>
-            <RainHeatmap />
-          </div>
-        </aside>
-
-        <section className="dashboard-content">
-          {/* Actions */}
-          <div className="region-actions">
-            <StarButton
-              isFavorite={isFavorite(selectedRegion)}
-              onClick={() => toggleFavorite(selectedRegion)}
-              label={isFavorite(selectedRegion) ? 'Saved' : 'Save'}
-            />
-            <button
-              className={`compare-btn ${compareMode ? 'active' : ''}`}
-              onClick={() => setCompareMode(!compareMode)}
-            >
-              <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" />
-              </svg>
-              Compare
-            </button>
-            <ShareForecast region={selectedRegion} daily={daily} selectedCity={selectedCity} />
-            {lastUpdated && (
-              <span className="last-updated">Updated: {lastUpdated}</span>
-            )}
-          </div>
-
-          {/* Compare mode */}
-          {compareMode && (
-            <ErrorBoundary>
-              <Suspense fallback={<p className="lazy-loading">Loading comparison...</p>}>
-                <CompareRegions
-                  date={selectedDate}
-                  onClose={() => setCompareMode(false)}
-                />
-              </Suspense>
-            </ErrorBoundary>
-          )}
-
-          {/* City selector */}
-          <div className="section-card">
-            <div className="section-header">
-              <MapPinIcon size={18} color="var(--accent)" />
-              <h2 className="section-title">
-                {selectedCity || getRegionLabel(selectedRegion)}
-              </h2>
-            </div>
-            <p className="section-desc">Select a specific city for more accurate forecast</p>
-            <CitySelector
-              region={selectedRegion}
-              selectedCity={selectedCity}
-              onSelectCity={setSelectedCity}
-            />
-          </div>
-
-          {/* Week at a Glance */}
-          <div className="section-card">
-            <div className="section-header">
-              <CalendarIcon size={18} color="var(--accent)" />
-              <h2 className="section-title">Week at a Glance</h2>
-            </div>
-            <p className="section-desc">Rain outlook for the next 7 days</p>
-            <WeekSummaryCard daily={daily} region={selectedRegion} />
-          </div>
-
-          {/* Travel advice */}
-          <TravelAdvice hourly={todayHourly} region={selectedRegion} />
-
-          {/* Trip Go Checker */}
-          <div className="section-card section-card-highlight">
-            <div className="section-header">
-              <MapPinIcon size={18} color="var(--accent)" />
-              <h2 className="section-title">Trip Go Checker</h2>
-              <span className="section-badge">Go / No-Go</span>
-            </div>
-            <p className="section-desc">Enter your destination — we'll tell you if it's worth the trip</p>
-            <TripGoChecker hourly={hourly} daily={daily} region={selectedRegion} />
-          </div>
-
-          {/* Smart Optimizer */}
-          <div className="section-card section-card-highlight">
-            <div className="section-header">
-              <TrendingUpIcon size={18} color="var(--accent)" />
-              <h2 className="section-title">Smart Optimizer</h2>
-              <span className="section-badge">AI Loop</span>
-            </div>
-            <p className="section-desc">
-              Tell us your goal — the optimizer analyzes weather signals and finds your best window.
-            </p>
-            <OptimizationPanel hourly={todayHourly} daily={daily} region={selectedRegion} />
-          </div>
-
-          {/* Activity Planner */}
-          <div className="section-card">
-            <div className="section-header">
-              <SunIcon size={18} color="#f59e0b" />
-              <h2 className="section-title">Activity Planner</h2>
-            </div>
-            <p className="section-desc">Best day for your plans this week</p>
-            <ActivityPlanner hourly={hourly} daily={daily} />
-          </div>
-
-          {/* Smart recommendations */}
-          <div className="section-card">
-            <div className="section-header">
-              <AlertCircleIcon size={18} color="var(--accent)" />
-              <h2 className="section-title">Conditions & Alerts</h2>
-            </div>
-            <p className="section-desc">Umbrella, flood risk, riding conditions</p>
-            <SmartRecommendations hourly={todayHourly} region={selectedRegion} />
-          </div>
-
-          {/* Transport Surge Predictor */}
-          <div className="section-card section-card-highlight">
-            <div className="section-header">
-              <TrendingUpIcon size={18} color="var(--accent)" />
-              <h2 className="section-title">Transport Surge Predictor</h2>
-              <span className="section-badge">Live</span>
-            </div>
-            <p className="section-desc">Predict ride-hailing price surges based on weather and demand patterns</p>
-            <ErrorBoundary>
-              <Suspense fallback={<p className="lazy-loading">Loading surge predictions...</p>}>
-                <TransportSurgePredictor
-                  region={selectedRegion}
-                  hourly={hourly}
-                  daily={daily}
-                  cityCoords={cityCoords}
-                />
-              </Suspense>
-            </ErrorBoundary>
-          </div>
-
-          {/* Best time to go */}
-          <div className="section-card">
-            <div className="section-header">
-              <SunIcon size={18} color="var(--accent)" />
-              <h2 className="section-title">Best Time to Go</h2>
-            </div>
-            <p className="section-desc">Driest and rainiest 3-hour windows today</p>
-            <BestTimeToGo hourly={todayHourly} />
-          </div>
-
-          {/* Day selector */}
-          <div className="section-card">
-            <div className="section-header">
-              <CalendarIcon size={18} color="var(--accent)" />
-              <h2 className="section-title">7-Day Forecast</h2>
-            </div>
-            <p className="section-desc">Tap a day to see hourly breakdown</p>
-            <DayCards
-              daily={daily}
-              selectedDate={selectedDate}
-              onSelectDate={setSelectedDate}
-            />
-          </div>
-
-          {/* Hourly timeline */}
-          <div className="section-card">
-            <div className="section-header">
-              <ClockIcon size={18} color="var(--accent)" />
-              <h2 className="section-title">Hour by Hour</h2>
-            </div>
-            <p className="section-desc">{dateLabel} - scroll to see when rain hits</p>
-            <HourlyTimeline hourly={todayHourly} />
-          </div>
-
-          {/* Historical Comparison */}
-          <div className="section-card">
-            <div className="section-header">
-              <TrendingUpIcon size={18} color="var(--accent)" />
-              <h2 className="section-title">vs. Last Year</h2>
-            </div>
-            <p className="section-desc">How this week compares to the same period last year</p>
-            <ErrorBoundary>
-              <Suspense fallback={<p className="lazy-loading">Loading historical data...</p>}>
-                <HistoricalComparison daily={daily} region={selectedRegion} coords={regionCoords} />
-              </Suspense>
-            </ErrorBoundary>
-          </div>
-
-          {/* Weather Risk Map — Live Radar */}
-          <div className="section-card">
-            <div className="section-header">
-              <DropletIcon size={18} color="var(--accent)" />
-              <h2 className="section-title">Weather Risk Map</h2>
-              <span className="section-badge">Live</span>
-            </div>
-            <p className="section-desc">Live rain radar over the Philippines — powered by RainViewer</p>
-            <ErrorBoundary>
-              <WeatherRiskMap />
-            </ErrorBoundary>
-          </div>
-
-          {/* Weekly trend chart */}
-          <div className="section-card">
-            <div className="section-header">
-              <TrendingUpIcon size={18} color="var(--accent)" />
-              <h2 className="section-title">Weekly Rain Trend</h2>
-            </div>
-            <p className="section-desc">{getRegionLabel(selectedRegion)}</p>
-            <ErrorBoundary>
-              <Suspense fallback={<p className="lazy-loading">Loading chart...</p>}>
-                <RainChart daily={daily} />
-              </Suspense>
-            </ErrorBoundary>
-          </div>
-
-          {/* Emergency Hotlines — direct numbers near your region */}
-          <div className="section-card">
-            <div className="section-header">
-              <AlertCircleIcon size={18} color="#c62828" />
-              <h2 className="section-title">Emergency Hotlines</h2>
-            </div>
-            <p className="section-desc">Direct disaster & rescue numbers near {getRegionLabel(selectedRegion)}</p>
-            <EmergencyHotlines region={selectedRegion} />
-          </div>
-        </section>
-      </div>
-
-      {/* Kuya Weather Chatbot */}
-      <Suspense fallback={null}>
-        <WeatherChatbot selectedRegion={selectedRegion} />
-      </Suspense>
-    </div>
-  );
+  const location = resolveLocation(selectedRegion, selectedCity)!;
+  const { loading, error, hourly, daily, lastUpdated, refetch } = useWeatherData(selectedRegion, location);
+  useEffect(() => {
+    writePreference('weather-lang-current-location', location.id);
+    const next = new URL(forecastUrl(window.location.href, location.id, selectedDate)); next.hash = window.location.hash;
+    window.history.replaceState(null, '', next);
+  }, [location.id, selectedDate]);
+  useEffect(() => { writePreference('weather-lang-lite', String(lite)); if(lite) setMapTool(''); }, [lite]);
+  function select(region: string, city?: string) { setSelectedRegion(region); setSelectedCity(city || null); }
+  useEffect(() => {
+    if (selectedDate < manilaDate(new Date(now))) setSelectedDate(manilaDate(new Date(now)));
+  }, [now, selectedDate]);
+  useEffect(() => {
+    const trigger = (event: Event) => {
+      const detail = (event as CustomEvent<{region?: string; city?: string}>).detail;
+      if (detail.region && resolveLocation(detail.region)) { setSelectedRegion(detail.region); setSelectedCity(detail.city && resolveLocation(detail.region, detail.city) ? detail.city : null); }
+      setLite(false);
+      setMapTool('reality');
+      document.getElementById('weather-maps')?.scrollIntoView({behavior:'instant'});
+    };
+    window.addEventListener('weather-reality-trigger', trigger);
+    return () => window.removeEventListener('weather-reality-trigger', trigger);
+  }, []);
+  const current = hourly[currentForecastIndex(hourly, now)];
+  const dayHours = hourly.filter(h => h.date === selectedDate);
+  const upcoming = remainingForecast(dayHours, now);
+  return <div className="dashboard modern-dashboard">
+    <section id="overview" className="product-section" aria-labelledby="overview-title">
+      <div className="section-intro"><div><p className="eyebrow">{text('YOUR DAY, WITH CONTEXT','ANG ARAW MO, MAY GABAY')}</p><h2 id="overview-title">{text('Your local forecast','Lokal na forecast')}</h2><p>{text('Forecasts for everyday plans across the Philippines.','Taya ng panahon para sa araw-araw na plano sa Pilipinas.')}</p></div><span className="timezone-chip">Asia/Manila · PHT</span></div>
+      <div className="dashboard-search"><RegionSearch selected={selectedRegion} onSelect={select}/><LocationDetect detecting={detecting} error={geoError} onDetect={async () => { const found = await detect(); if (found) select(found.region, found.city); }}/></div>
+      <div className="location-heading"><h3>{location.source === 'regional-reference' ? selectedRegion : location.name}</h3><StarButton isFavorite={saved.isSaved(location.id)} onClick={() => saved.toggle(location.id)} label={saved.isSaved(location.id) ? text('Saved location','Naka-save na lugar') : text('Save location','I-save ang lugar')}/><ShareForecast region={selectedRegion} selectedCity={selectedCity} daily={daily} selectedDate={selectedDate}/></div>
+      {loading ? <SkeletonLoader/> : error ? <div className="error-state" role="alert"><h3>{text('Forecast unavailable','Hindi makuha ang forecast')}</h3><p>{error}</p><p>{text('No expired forecast or favorable default is substituted. Check official sources below.','Hindi gumagamit ng lumang forecast o imbentong magandang kondisyon. Tingnan ang opisyal na sanggunian sa ibaba.')}</p><button className="retry-btn" onClick={refetch}>{text('Try again','Subukan muli')}</button></div> : current ? <>
+        <div className="conditions-hero"><div className="conditions-primary"><p>{text('FORECAST FOR THIS HOUR · NOT AN OBSERVATION','TAYA PARA SA ORAS NA ITO · HINDI AKTUWAL NA OBSERBASYON')}</p><div className="hero-temperature">{Math.round(current.temperature)}<span>°C</span></div><h3>{weatherLabel(current.weather_code, locale === 'fil')}</h3><p>{current.date} · {String(current.hour).padStart(2,'0')}:00 PHT</p></div>
+        <dl className="conditions-grid"><div><dt><CloudRainIcon/>{text('Rain probability','Tsansa ng ulan')}</dt><dd>{current.precipitation_probability}%</dd></div><div><dt><DropletIcon/>{text('Hourly precipitation','Ulan sa isang oras')}</dt><dd>{current.precipitation} mm</dd></div><div><dt><WindIcon/>{text('Wind / gusts','Hangin / pagbugso')}</dt><dd>{current.wind_speed} / {current.wind_gusts} km/h</dd></div><div><dt><ThermometerIcon/>{text('Humidity','Halumigmig')}</dt><dd>{current.humidity}%</dd></div></dl></div>
+        <p className="freshness" role="status">{lastUpdated}</p><p className="data-note">{text('Hourly model forecasts from Open-Meteo, not a live sensor or official warning.','Oras-oras na model forecast mula sa Open-Meteo, hindi live sensor o opisyal na babala.')}</p>
+        <div className="next-hours"><h3>{text('The next few hours','Mga susunod na oras')}</h3><HourlyTimeline hourly={remainingForecast(hourly,now).slice(0,6)}/></div>
+      </> : <p role="status">{text('No forecast for this hour. Refresh or check official sources.','Walang forecast para sa oras na ito. I-refresh o tingnan ang opisyal na sanggunian.')}</p>}
+      <p className="data-note">{text('Representative forecast point; conditions can vary nearby.','Kinatawang lokasyon ng forecast; maaaring iba ang panahon sa kalapit na lugar.')}</p>
+      <details><summary>{text('Choose a city (optional)','Pumili ng lungsod (opsyonal)')}</summary><CitySelector region={selectedRegion} selectedCity={selectedCity} onSelectCity={setSelectedCity}/></details>
+      {saved.locations.length > 0 && <div className="saved-locations" role="group" aria-label={text('Saved locations','Mga naka-save na lugar')}>{saved.locations.map(item => <div key={item.id}><button onClick={() => select(item.region, item.source === 'catalog-city' ? item.name : undefined)} aria-pressed={item.id===location.id}>{item.name}</button><button onClick={() => saved.toggle(item.id)} aria-label={`Remove ${item.name} from saved locations`}>×</button></div>)}</div>}
+      {saved.notice && <p role="status">{saved.notice}</p>}
+      {initial.notice && <p className="data-note" role="status">{initial.notice}</p>}
+    </section>
+    <section id="forecast" className="product-section" aria-labelledby="forecast-title"><div className="section-intro"><div><p className="eyebrow">{text('LOOK AHEAD','MAGPLANO')}</p><h2 id="forecast-title">{text('Your forecast','Taya ng panahon')}</h2><p>{text('Select a day to explore hourly conditions. Daily percentages are mean hourly probabilities, not a whole-day probability.','Pumili ng araw para makita ang bawat oras. Ang porsiyento sa araw ay average ng oras-oras na tsansa ng ulan.')}</p></div><button onClick={() => setCompareMode(v => !v)} aria-expanded={compareMode}>{text('Compare locations','Ihambing ang mga lugar')}</button></div>
+      {compareMode && <ErrorBoundary><Suspense fallback={<p role="status">{text('Loading comparison…','Kinukuha ang paghahambing…')}</p>}><CompareRegions date={selectedDate} onClose={() => setCompareMode(false)}/></Suspense></ErrorBoundary>}
+      {!loading && !error && daily.length > 0 ? <><DayCards daily={daily} selectedDate={selectedDate} onSelectDate={setSelectedDate}/><div id="forecast-day-panel" role="tabpanel" aria-labelledby={`forecast-day-${selectedDate}`} tabIndex={0}><h3>{selectedDate} · PHT</h3><HourlyTimeline hourly={dayHours}/></div><DeferredDetails title={<>{text('Weekly rain chart and previous-year comparison','Tsart ng ulan at paghahambing sa nakaraang taon')}</>}><ErrorBoundary><Suspense fallback={<p>Loading charts…</p>}><RainChart daily={daily}/><HistoricalComparison daily={daily} region={selectedRegion} coords={location}/></Suspense></ErrorBoundary></DeferredDetails></> : <p>{text('Forecast details appear when valid data is available.','Lalabas ang detalye kapag may wastong datos.')}</p>}
+    </section>
+    <section id="trip-planner" className="product-section" aria-labelledby="trip-title"><div className="section-intro"><div><p className="eyebrow">{text('PLAN WITH CARE','MAINGAT NA PAGPAPLANO')}</p><h2 id="trip-title">{text('Trip & activity planner','Plano sa biyahe at aktibidad')}</h2><p>{text('Weather suitability, not a guarantee of road or travel safety.','Gabay batay sa forecast, hindi garantiya ng kaligtasan sa kalsada o biyahe.')}</p></div></div>
+      <ErrorBoundary><TripGoChecker region={selectedRegion} hourly={hourly} daily={daily}/></ErrorBoundary>
+      {!loading && !error && daily.length > 0 && <><DeferredDetails title={<>{text('Activities and best weather windows','Mga aktibidad at angkop na oras')}</>}><ActivityPlanner hourly={remainingForecast(hourly,now)} daily={daily}/><h3>{selectedDate} · PHT</h3><BestTimeToGo hourly={upcoming}/><OptimizationPanel hourly={upcoming} daily={daily} region={selectedRegion}/></DeferredDetails><DeferredDetails title={<>{text('Forecast-derived planning indicators','Mga gabay mula sa forecast')}</>}><SmartRecommendations hourly={upcoming} region={selectedRegion}/><Suspense fallback={<p>Loading…</p>}><TransportSurgePredictor region={selectedRegion} hourly={hourly} daily={daily} cityCoords={location}/></Suspense></DeferredDetails></>}
+    </section>
+    <section id="weather-maps" className="product-section" aria-labelledby="maps-title"><div className="section-intro"><div><p className="eyebrow">{text('EXPLORE','TUKLASIN')}</p><h2 id="maps-title">{text('Weather maps','Mga mapa ng panahon')}</h2><p>{text('Maps and imagery load only when requested. Text forecasts remain available above.','Kukunin lang ang mapa at larawan kapag pinili. Nasa itaas ang tekstong forecast.')}</p></div></div>
+      <label className="lite-control"><input type="checkbox" checked={lite} onChange={e=>setLite(e.target.checked)}/>{text('Lightweight mode — disable maps and imagery','Magaan na mode — walang mapa at larawan')}</label>
+      <div className="map-tools" role="group" aria-label={text('Map tools','Mga mapa')}>{[['radar',text('Rain radar','Radar ng ulan')],['heatmap',text('Forecast heatmap','Mapa ng taya ng ulan')],['regions',text('Region explorer','Mga rehiyon')],['reality','Weather Reality']].map(([id,label]) => <button key={id} disabled={lite} onClick={() => setMapTool(mapTool === id ? '' : id)} aria-pressed={mapTool === id}>{label}</button>)}</div>
+      {!lite && mapTool && <ErrorBoundary key={mapTool}><Suspense fallback={<p role="status">{text('Loading map…','Kinukuha ang mapa…')}</p>}>{mapTool === 'radar' ? <WeatherRiskMap/> : mapTool === 'heatmap' ? <RainHeatmap/> : mapTool === 'regions' ? <PhilippineMap selected={selectedRegion} onSelect={select}/> : hourly.length ? <WeatherReality region={selectedRegion} selectedCity={selectedCity} hourly={hourly}/> : <p>{text('Valid forecast required for weather simulation.','Kailangan ng wastong forecast para sa simulation.')}</p>}</Suspense></ErrorBoundary>}
+    </section>
+    <section id="preparedness" className="product-section" aria-labelledby="preparedness-title"><div className="section-intro"><div><p className="eyebrow">{text('TRUSTED SOURCES','MGA SANGGUNIAN')}</p><h2 id="preparedness-title">{text('Official sources & emergency resources','Opisyal na sanggunian at tulong sa emergency')}</h2><p>{text('Use issuing authorities for warnings and local officials for operational information.','Sumangguni sa awtoridad para sa babala at sa lokal na pamahalaan para sa aktuwal na sitwasyon.')}</p></div></div><WeatherSignalPanel region={selectedRegion}/><EmergencyHotlines region={selectedRegion}/><button onClick={() => setFacilities(v => !v)} aria-expanded={facilities}>{text('Find mapped facilities — status unverified','Hanapin ang mga pasilidad — hindi beripikado ang katayuan')}</button>{facilities && <ErrorBoundary><Suspense fallback={<p>Loading mapped facilities…</p>}><EvacuationPanel lat={location.lat} lon={location.lon} region={location.name}/></Suspense></ErrorBoundary>}</section>
+    <section id="kuya-weather" className="product-section" aria-labelledby="kuya-title"><div className="section-intro"><div><p className="eyebrow">KUYA WEATHER</p><h2 id="kuya-title">{text('A little help reading the forecast','Tulong sa pag-unawa ng forecast')}</h2><p>{text('A deterministic, rule-based guide using Open-Meteo. No generative AI, official alert feed or road-status service. Detailed legacy tools may use English or Taglish.','Gabay na may nakatakdang mga tuntunin gamit ang Open-Meteo. Walang generative AI, opisyal na alert feed o serbisyo sa katayuan ng kalsada. Maaaring Ingles o Taglish ang ilang detalyadong tool.')}</p></div></div><button onClick={() => setAssistant(v => !v)} aria-expanded={assistant}>{text('Open forecast guide','Buksan ang gabay')}</button>{assistant && <ErrorBoundary><Suspense fallback={<p>Loading guide…</p>}><WeatherChatbot selectedRegion={selectedRegion} selectedCity={selectedCity}/></Suspense></ErrorBoundary>}</section>
+  </div>;
 }

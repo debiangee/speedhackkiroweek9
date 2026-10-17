@@ -1,3 +1,4 @@
+import { manilaDate } from '../utils/time';
 import { type ReactNode } from 'react';
 import { StormIcon, CloudRainIcon, CloudSunRainIcon, CloudSunIcon, SunIcon } from './Icons';
 import type { DailySummary } from '../hooks/useWeatherData';
@@ -9,11 +10,9 @@ interface Props {
   onSelectDate: (date: string) => void;
 }
 
-function getDayName(dateStr: string, index: number): string {
-  if (index === 0) return 'Today';
-  if (index === 1) return 'Tomorrow';
+function getWeekday(dateStr: string): string {
   const date = new Date(dateStr + 'T00:00:00');
-  return date.toLocaleDateString('en-PH', { weekday: 'short' });
+  return date.toLocaleDateString('en-PH', { weekday: 'short' }).toUpperCase();
 }
 
 function getDateLabel(dateStr: string): string {
@@ -21,40 +20,101 @@ function getDateLabel(dateStr: string): string {
   return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
 }
 
-function getRainVerdict(avgProb: number): { text: string; icon: ReactNode; color: string } {
-  if (avgProb >= 70) return { text: 'Heavy rain', icon: <StormIcon size={28} color="#1565c0" />, color: '#1565c0' };
-  if (avgProb >= 50) return { text: 'Rain likely', icon: <CloudRainIcon size={28} color="#1976d2" />, color: '#1976d2' };
-  if (avgProb >= 30) return { text: 'Possible showers', icon: <CloudSunRainIcon size={28} color="#42a5f5" />, color: '#42a5f5' };
-  if (avgProb >= 15) return { text: 'Mostly dry', icon: <CloudSunIcon size={28} color="#ff9800" />, color: '#ff9800' };
-  return { text: 'Clear skies', icon: <SunIcon size={28} color="#4caf50" />, color: '#4caf50' };
+function getRainVerdict(avgProb: number): { text: string; icon: ReactNode; className: string } {
+  if (avgProb >= 70) {
+    return {
+      text: 'Heavy rain',
+      icon: <StormIcon size={26} className="day-weather-svg storm" />,
+      className: 'verdict-heavy-rain',
+    };
+  }
+  if (avgProb >= 50) {
+    return {
+      text: 'Rain likely',
+      icon: <CloudRainIcon size={26} className="day-weather-svg rain" />,
+      className: 'verdict-rain-likely',
+    };
+  }
+  if (avgProb >= 30) {
+    return {
+      text: 'Showers',
+      icon: <CloudSunRainIcon size={26} className="day-weather-svg showers" />,
+      className: 'verdict-showers',
+    };
+  }
+  if (avgProb >= 15) {
+    return {
+      text: 'Mostly dry',
+      icon: <CloudSunIcon size={26} className="day-weather-svg mostly-dry" />,
+      className: 'verdict-mostly-dry',
+    };
+  }
+  return {
+    text: 'Clear skies',
+    icon: <SunIcon size={26} className="day-weather-svg clear" />,
+    className: 'verdict-clear',
+  };
 }
 
 export function DayCards({ daily, selectedDate, onSelectDate }: Props) {
   if (daily.length === 0) return null;
 
   return (
-    <div className="day-cards">
-      {daily.map((day, i) => {
+    <div className="day-cards" role="tablist" aria-label="7-day weather forecast">
+      {daily.map((day) => {
         const verdict = getRainVerdict(day.avg_prob);
         const isSelected = day.date === selectedDate;
+        const isToday = day.date === manilaDate();
+        const maxTemp = Math.round(day.max_temp ?? day.avg_temp);
+        const minTemp = Math.round(day.min_temp ?? day.avg_temp - 4);
+
         return (
           <button
             key={day.date}
-            className={`day-card ${isSelected ? 'selected' : ''}`}
+            className={`day-card ${isSelected ? 'selected' : ''} ${isToday ? 'is-today' : ''}`}
             onClick={() => onSelectDate(day.date)}
-            aria-pressed={isSelected}
+            role="tab"
+            tabIndex={isSelected ? 0 : -1}
+            id={`forecast-day-${day.date}`}
+            aria-controls="forecast-day-panel"
+            onKeyDown={e => {
+              const directions = ['ArrowLeft','ArrowRight','Home','End'];
+              if (!directions.includes(e.key)) return;
+              e.preventDefault();
+              const index = daily.findIndex(d=>d.date===day.date);
+              const next = e.key === 'Home' ? 0 : e.key === 'End' ? daily.length-1 : (index+(e.key==='ArrowRight'?1:-1)+daily.length)%daily.length;
+              onSelectDate(daily[next].date);
+              e.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
+            }}
+            aria-selected={isSelected}
+            aria-label={`${isToday ? 'Today, ' : ''}${getWeekday(day.date)} ${getDateLabel(day.date)}: ${verdict.text}, High ${maxTemp}°C, Low ${minTemp}°C, Rain ${day.avg_prob}%`}
           >
+            {/* Header: Weekday + Date + Today Badge */}
             <div className="day-card-header">
-              <span className="day-name">{getDayName(day.date, i)}</span>
+              <div className="day-name-row">
+                <span className="day-weekday">{getWeekday(day.date)}</span>
+                {isToday && <span className="today-badge">TODAY</span>}
+              </div>
               <span className="day-date">{getDateLabel(day.date)}</span>
             </div>
-            <span className="day-icon">{verdict.icon}</span>
-            <div className="day-card-info">
-              <span className="day-verdict" style={{ color: verdict.color }}>
+
+            {/* Weather SVG Icon */}
+            <div className="day-icon-wrapper" aria-hidden="true">
+              {verdict.icon}
+            </div>
+
+            {/* Temperatures: High / Low */}
+            <div className="day-temps-row">
+              <span className="temp-high">{maxTemp}°</span>
+              <span className="temp-low">{minTemp}°</span>
+            </div>
+
+            {/* Rain Prob & Verdict */}
+            <div className="day-card-footer">
+              <span className={`day-verdict-pill ${verdict.className}`}>
                 {verdict.text}
               </span>
-              <span className="day-prob">{day.avg_prob}% rain</span>
-              <span className="day-temp">{day.avg_temp}{'\u00B0'}C</span>
+              <span className="day-rain-prob">Rain {day.avg_prob}%</span>
             </div>
           </button>
         );

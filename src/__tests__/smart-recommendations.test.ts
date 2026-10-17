@@ -1,46 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import type { HourlyData } from '../hooks/useWeatherData';
 
-// Re-implement the pure logic from SmartRecommendations for unit testing
-type Severity = 'safe' | 'caution' | 'warning' | 'danger';
-
-function getUmbrellaSeverity(hourly: HourlyData[]): Severity {
-  const maxProb = Math.max(...hourly.map((h) => h.precipitation_probability));
-  const avgProb = hourly.reduce((s, h) => s + h.precipitation_probability, 0) / hourly.length;
-
-  if (maxProb < 20) return 'safe';
-  if (avgProb < 40) return 'caution';
-  if (avgProb < 70) return 'warning';
-  return 'danger';
-}
-
-function getFloodSeverity(hourly: HourlyData[]): Severity {
-  const totalRain = hourly.reduce((s, h) => s + h.precipitation, 0);
-  const maxHourlyRain = Math.max(...hourly.map((h) => h.precipitation));
-
-  if (totalRain < 10 && maxHourlyRain < 5) return 'safe';
-  if (totalRain < 30 && maxHourlyRain < 15) return 'caution';
-  if (totalRain < 60) return 'warning';
-  return 'danger';
-}
-
-function getMotorcycleSeverity(hourly: HourlyData[]): Severity {
-  const avgProb = hourly.reduce((s, h) => s + h.precipitation_probability, 0) / hourly.length;
-  const maxWind = Math.max(...hourly.map((h) => h.wind_speed));
-  const maxRain = Math.max(...hourly.map((h) => h.precipitation));
-
-  if (avgProb < 25 && maxWind < 30) return 'safe';
-  if (avgProb < 50 && maxWind < 40) return 'caution';
-  if (maxRain < 15 && maxWind < 50) return 'warning';
-  return 'danger';
-}
-
-function getWindSeverity(hourly: HourlyData[]): Severity | null {
-  const maxWind = Math.max(...hourly.map((h) => h.wind_speed));
-  if (maxWind < 30) return null;
-  if (maxWind < 50) return 'caution';
-  return 'danger';
-}
+import { getUmbrellaRec, getFloodRisk, getMotorcycleConditions, getWindAlert } from '../components/SmartRecommendations';
+const getUmbrellaSeverity = (hours: HourlyData[]) => getUmbrellaRec(hours).severity;
+const getMotorcycleSeverity = (hours: HourlyData[]) => getMotorcycleConditions(hours).severity;
+const getWindSeverity = (hours: HourlyData[]) => getWindAlert(hours)?.severity ?? null;
 
 function makeHourlyData(overrides: Partial<HourlyData>[]): HourlyData[] {
   return overrides.map((o, i) => ({
@@ -106,49 +70,11 @@ describe('getUmbrellaSeverity (map + reduce loop)', () => {
   });
 });
 
-describe('getFloodSeverity (reduce + map loop)', () => {
-  it('returns safe for minimal rain', () => {
-    const hourly = makeHourlyData(Array(12).fill({ precipitation: 0.5 }));
-    // total = 6, max = 0.5
-    expect(getFloodSeverity(hourly)).toBe('safe');
-  });
-
-  it('returns caution for moderate total rain', () => {
-    const hourly = makeHourlyData(Array(12).fill({ precipitation: 2 }));
-    // total = 24, max = 2
-    expect(getFloodSeverity(hourly)).toBe('caution');
-  });
-
-  it('returns warning for heavy total rain', () => {
-    const hourly = makeHourlyData(Array(12).fill({ precipitation: 4 }));
-    // total = 48, max = 4
-    expect(getFloodSeverity(hourly)).toBe('warning');
-  });
-
-  it('returns danger for extreme rainfall', () => {
-    const hourly = makeHourlyData(Array(12).fill({ precipitation: 10 }));
-    // total = 120, max = 10
-    expect(getFloodSeverity(hourly)).toBe('danger');
-  });
-
-  it('triggers caution on high max even with low total', () => {
-    const hourly = makeHourlyData([
-      { precipitation: 14 },  // Just under 15 max threshold
-      { precipitation: 1 },
-      { precipitation: 1 },
-    ]);
-    // total = 16, max = 14
-    expect(getFloodSeverity(hourly)).toBe('caution');
-  });
-
-  it('triggers warning when max >= 15 even with moderate total', () => {
-    const hourly = makeHourlyData([
-      { precipitation: 16 },
-      { precipitation: 1 },
-      { precipitation: 1 },
-    ]);
-    // total = 18, max = 16 — total < 30 but max >= 15 so not caution, total < 60 so warning
-    expect(getFloodSeverity(hourly)).toBe('warning');
+describe('flood information is explicitly unknown regardless of rain', () => {
+  it.each([0, 2, 15, 100])('does not infer operational flood safety from %s mm', rain => {
+    const result = getFloodRisk(makeHourlyData([{ precipitation: rain }]));
+    expect(result.title).toBe('Flood conditions unknown');
+    expect(result.description).toContain('Rain forecasts alone cannot establish flood risk');
   });
 });
 

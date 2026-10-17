@@ -1,15 +1,15 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { LocaleProvider } from './hooks/useLocale';
 import './index.css';
-import './animations.css';
 import './animations.css';
 
 const rootEl = document.getElementById('root');
 if (rootEl) {
   ReactDOM.createRoot(rootEl).render(
     <React.StrictMode>
-      <App />
+      <LocaleProvider><App /></LocaleProvider>
     </React.StrictMode>
   );
 } else {
