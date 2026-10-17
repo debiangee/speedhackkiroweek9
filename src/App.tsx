@@ -38,7 +38,7 @@ function App() {
           <span className="footer-data-sources">
             Data from <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>
             {' | '}
-            Advisories via <a href="https://www.pagasa.dost.gov.ph/" target="_blank" rel="noopener noreferrer">PAGASA</a>
+            Official information: <a href="https://www.pagasa.dost.gov.ph/" target="_blank" rel="noopener noreferrer">PAGASA</a>
           </span>
         </div>
       </footer>

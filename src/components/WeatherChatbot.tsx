@@ -1,3 +1,4 @@
+import { manilaDate, manilaHour } from '../utils/time';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   MessageCircleIcon,
@@ -243,23 +244,9 @@ function computeDangerScore(entry: HourlyEntry): number {
 }
 
 // Flood risk assessment based on accumulated rain
-function assessFloodRisk(data: HourlyEntry[]): { level: 'low' | 'moderate' | 'high' | 'extreme'; accumulated: number } {
-  if (data.length === 0) return { level: 'low', accumulated: 0 };
-  // Open-Meteo: precipitation already includes rain + showers (+ snowfall which is 0 in PH)
-  // So just use precipitation directly to avoid overcounting
-  const accumulated = data.reduce((sum, d) => sum + (d.precipitation ?? 0), 0);
-  const maxHourlyRate = data.length > 0 ? Math.max(...data.map(d => d.precipitation ?? 0)) : 0;
-  const sustainedHeavy = data.filter(d => (d.precipitation ?? 0) > 7.5).length; // Hours of heavy rain
-
-  // PAGASA flood warning thresholds adapted
-  if (accumulated > 65 || maxHourlyRate > 30 || sustainedHeavy > 3) return { level: 'extreme', accumulated };
-  if (accumulated > 35 || maxHourlyRate > 15 || sustainedHeavy > 2) return { level: 'high', accumulated };
-  if (accumulated > 15 || maxHourlyRate > 7.5) return { level: 'moderate', accumulated };
-  return { level: 'low', accumulated };
-}
 
 function getGreeting(): string {
-  const hour = new Date().getHours();
+  const hour = manilaHour();
   if (hour < 12) return 'Magandang umaga, pre!';
   if (hour < 18) return 'Magandang hapon, tol!';
   return 'Magandang gabi, pare!';
@@ -348,7 +335,10 @@ async function fetchWeatherForRegion(region: string): Promise<HourlyEntry[] | nu
     if (!res.ok) return null;
     const data = await res.json();
 
-    if (!data.hourly || !data.hourly.time || data.hourly.time.length === 0) return null;
+    if (!data.hourly || !Array.isArray(data.hourly.time) || !data.hourly.time.length) return null;
+    for (const field of params.split(',')) {
+      if (!Array.isArray(data.hourly[field]) || data.hourly[field].length !== data.hourly.time.length || data.hourly[field].some((v: unknown) => typeof v !== 'number' || !Number.isFinite(v))) return null;
+    }
 
     const entries: HourlyEntry[] = [];
     for (let i = 0; i < data.hourly.time.length; i++) {
@@ -384,15 +374,15 @@ async function fetchWeatherForRegion(region: string): Promise<HourlyEntry[] | nu
     return entries;
   } catch {
     // Return stale cache if available on network error
-    if (cached) return cached.data;
+    // Expired forecasts are never silently reused.
     return null;
   }
 }
 
 function buildCurrentResponse(region: string, data: HourlyEntry[]): string {
   const now = new Date();
-  const currentHour = now.getHours();
-  const todayStr = now.toISOString().split('T')[0];
+  const currentHour = manilaHour(now);
+  const todayStr = manilaDate(now);
 
   const currentIdx = data.findIndex(
     (d) => d.time.startsWith(todayStr) && parseInt(d.time.split('T')[1]) === currentHour
@@ -494,7 +484,7 @@ function buildForecastResponse(region: string, data: HourlyEntry[]): string {
     if (hours.length === 0) continue;
 
     const d = new Date(date + 'T00:00:00');
-    const isToday = date === now.toISOString().split('T')[0];
+    const isToday = date === manilaDate(now);
     const dayLabel = isToday ? 'Today' : d.toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric' });
 
     const temps = hours.map(h => h.temperature);
@@ -558,7 +548,7 @@ function buildForecastResponse(region: string, data: HourlyEntry[]): string {
 
 function buildRainResponse(region: string, data: HourlyEntry[]): string {
   const now = new Date();
-  const todayStr = now.toISOString().split('T')[0];
+  const todayStr = manilaDate(now);
   const todayData = data.filter((d) => d.time.startsWith(todayStr));
 
   if (todayData.length === 0) {
@@ -570,7 +560,6 @@ function buildRainResponse(region: string, data: HourlyEntry[]): string {
   const maxProb = Math.max(...todayData.map((d) => d.precipitation_probability));
   const rainyHours = todayData.filter((d) => d.precipitation > 0.5);
   const thunderHours = todayData.filter(d => d.weather_code >= 95);
-  const floodRisk = assessFloodRisk(todayData);
 
   let response = `🌧️ **Rain Report** — ${region}\n\n`;
 
@@ -613,33 +602,16 @@ function buildRainResponse(region: string, data: HourlyEntry[]): string {
   }
 
   // Flood risk assessment
-  const floodEmoji = floodRisk.level === 'extreme' ? '🚨' :
-    floodRisk.level === 'high' ? '⚠️' :
-    floodRisk.level === 'moderate' ? '⚡' : '✅';
-
-  response += `\n${floodEmoji} **Flood Risk: ${floodRisk.level.toUpperCase()}**\n`;
-  if (floodRisk.level === 'extreme') {
-    response += `  Accumulated ${Math.round(floodRisk.accumulated)}mm!\n`;
-    response += `  🚨 Iwasan ang low-lying areas!`;
-  } else if (floodRisk.level === 'high') {
-    response += `  Mataas ang chance ng baha!\n`;
-    response += `  ⚠️ Mag-ingat sa flood-prone na lugar!`;
-  } else if (floodRisk.level === 'moderate') {
-    response += `  Possible minor flooding sa kanal at low areas.`;
-  } else if (totalRain === 0) {
-    response += `  Walang ulan! Pwede lumabas nang walang payong! 🎉`;
-  } else {
-    response += `  Minimal flood threat. Stay alert lang!`;
-  }
+  response += '\nFlood conditions unknown. Consult PAGASA and local DRRMO/LGU information.';
 
   return response;
 }
 
 function buildTravelResponse(region: string, data: HourlyEntry[]): string {
   const now = new Date();
-  const todayStr = now.toISOString().split('T')[0];
+  const todayStr = manilaDate(now);
   const todayData = data.filter((d) => d.time.startsWith(todayStr));
-  const currentHour = now.getHours();
+  const currentHour = manilaHour(now);
   const remaining = todayData.filter((d) => parseInt(d.time.split('T')[1]) >= currentHour);
 
   if (remaining.length === 0) {
@@ -684,7 +656,7 @@ function buildTravelResponse(region: string, data: HourlyEntry[]): string {
     verdictEmoji = '☁️';
     safetyLevel = 3;
   } else {
-    verdict = 'Go lang! Maganda ang panahon para sa byahe!';
+    verdict = 'Lower forecast disruption; road safety remains unknown.';
     verdictEmoji = '✅';
     safetyLevel = 5;
   }
@@ -710,14 +682,14 @@ function buildTravelResponse(region: string, data: HourlyEntry[]): string {
   response += `\n🛣️ **By Transport Mode**\n`;
   response += `  🏍️ Motor: ${safetyLevel <= 2 ? 'HUWAG. Delikado talaga.' : safetyLevel <= 3 ? 'Ingat! Slow sa wet roads.' : 'G lang, pare!'}\n`;
   response += `  🚗 Kotse: ${safetyLevel <= 2 ? 'Headlights on, mabagal lang.' : 'Okay naman. Ingat sa baha areas.'}\n`;
-  response += `  🚶 Lakad: ${minVisibility < 3000 ? 'Low visibility — mag-ingat.' : safetyLevel >= 4 ? 'Safe! Enjoy the walk!' : 'Dala payong!'}`;
+  response += `  🚶 Lakad: ${minVisibility < 3000 ? 'Low visibility — mag-ingat.' : safetyLevel >= 4 ? 'Check local walking conditions' : 'Dala payong!'}`;
 
   return response;
 }
 
 function buildHeatResponse(region: string, data: HourlyEntry[]): string {
   const now = new Date();
-  const todayStr = now.toISOString().split('T')[0];
+  const todayStr = manilaDate(now);
   const todayData = data.filter((d) => d.time.startsWith(todayStr));
 
   if (todayData.length === 0) {
@@ -734,7 +706,7 @@ function buildHeatResponse(region: string, data: HourlyEntry[]): string {
   }));
 
   const peakHeat = heatData.reduce((prev, curr) => curr.heatIndex > prev.heatIndex ? curr : prev);
-  const currentHour = now.getHours();
+  const currentHour = manilaHour(now);
   const currentData = heatData.find(h => h.hour === currentHour);
 
   let response = `🌡️ **Heat Report** — ${region}\n\n`;
@@ -764,7 +736,7 @@ function buildHeatResponse(region: string, data: HourlyEntry[]): string {
     response += `  Fatigue possible with prolonged outdoor activity.\n`;
     response += `  Tubig every 20 mins. Maghanap ng shade!`;
   } else {
-    response += `✅ **SAFE**\n`;
+    response += `✅ **LOWER HEAT INDICATOR**\n`;
     response += `  Comfortable heat levels.\n`;
     response += `  Enjoy the outdoors pero hydrate pa rin!`;
   }
@@ -777,67 +749,11 @@ function buildHeatResponse(region: string, data: HourlyEntry[]): string {
   return response;
 }
 
-function buildFloodResponse(region: string, data: HourlyEntry[]): string {
-  const now = new Date();
-  const todayStr = now.toISOString().split('T')[0];
-  const todayData = data.filter((d) => d.time.startsWith(todayStr));
-
-  if (todayData.length === 0) {
-    return `😅 Walang flood data para sa ${region} ngayon. Try mo ulit mamaya, tol!`;
-  }
-
-  const floodRisk = assessFloodRisk(todayData);
-  const totalRain = todayData.reduce((s, d) => s + d.precipitation, 0);
-  const heavyHours = todayData.filter(d => d.precipitation > 7.5);
-  const maxHourlyRate = Math.max(...todayData.map(d => d.precipitation));
-
-  // Look at next 3 days for accumulated risk
-  const next3Days = data.slice(0, 72);
-  const threeDayRain = next3Days.reduce((s, d) => s + d.precipitation, 0);
-
-  const floodEmoji = floodRisk.level === 'extreme' ? '🚨' :
-    floodRisk.level === 'high' ? '⚠️' :
-    floodRisk.level === 'moderate' ? '⚡' : '✅';
-
-  let response = `🌊 **Flood Assessment** — ${region}\n\n`;
-  response += `${floodEmoji} **Risk Level: ${floodRisk.level.toUpperCase()}**\n\n`;
-
-  response += `📊 **Key Metrics**\n`;
-  response += `  💧 Total rain today: ${Math.round(totalRain * 10) / 10}mm\n`;
-  response += `  ⚡ Max hourly rate: ${Math.round(maxHourlyRate * 10) / 10}mm/hr\n`;
-  response += `  🌧️ Heavy rain hours (>7.5mm/hr): ${heavyHours.length}\n`;
-  response += `  📅 3-day accumulated: ${Math.round(threeDayRain * 10) / 10}mm\n`;
-
-  // PAGASA-style warnings adapted
-  if (floodRisk.level === 'extreme') {
-    response += `\n🚨 **EXTREME FLOOD WARNING**\n`;
-    response += `  • Iwasan ang lahat ng low-lying areas\n`;
-    response += `  • Huwag tatawid sa baha\n`;
-    response += `  • Prepare emergency supplies\n`;
-    response += `  • Monitor PAGASA at local DRRM`;
-  } else if (floodRisk.level === 'high') {
-    response += `\n⚠️ **HIGH FLOOD RISK**\n`;
-    response += `  • Possible flooding sa creeks at rivers\n`;
-    response += `  • Avoid riverside at coastal areas\n`;
-    response += `  • Keep phone charged for alerts`;
-  } else if (floodRisk.level === 'moderate') {
-    response += `\n⚡ **MODERATE RISK**\n`;
-    response += `  • Minor flooding possible sa drainage\n`;
-    response += `  • Ingat sa pagmamaneho — hydroplaning`;
-  } else {
-    response += `\n✅ **LOW RISK**\n`;
-    response += `  • Walang significant flood threat\n`;
-    response += `  • Monitor weather updates pa rin!`;
-  }
-
-  if (threeDayRain > 100) {
-    response += `\n\n📢 **NOTE:** ${Math.round(threeDayRain)}mm expected sa 3 days. Saturated soil = higher flood risk kahit moderate rain.`;
-  }
-
-  return response;
+function buildFloodResponse(region: string, _data: HourlyEntry[]): string {
+  return `Flood conditions in ${region} are unknown. Forecast rain alone cannot establish flood risk. Check official PAGASA bulletins and your local DRRMO/LGU. Never cross floodwater.`;
 }
 
-function generateFollowUps(intent: Intent, region: string): string[] {
+function generateFollowUps(intent: ReturnType<typeof detectIntent>, region: string): string[] {
   switch (intent) {
     case 'weather_now':
       return [
@@ -991,8 +907,8 @@ async function generateBotResponse(userText: string, selectedRegion: string): Pr
 
         if (dataA && dataB) {
           const now = new Date();
-          const todayStr = now.toISOString().split('T')[0];
-          const currentHour = now.getHours();
+          const todayStr = manilaDate(now);
+          const currentHour = manilaHour(now);
 
           const getCurrent = (d: HourlyEntry[]) =>
             d.find((e) => e.time.startsWith(todayStr) && parseInt(e.time.split('T')[1]) === currentHour);
@@ -1031,9 +947,9 @@ async function generateBotResponse(userText: string, selectedRegion: string): Pr
             response += `───────────────\n`;
             // Smart recommendation
             if (dangerA < dangerB) {
-              response += `✅ **${regionA}** ang mas safe ngayon!`;
+              response += `✅ **${regionA}** has a lower heuristic weather score; road safety is unknown.`;
             } else if (dangerB < dangerA) {
-              response += `✅ **${regionB}** ang mas safe ngayon!`;
+              response += `✅ **${regionB}** has a lower heuristic weather score; road safety is unknown.`;
             } else {
               response += `🤝 Pareho lang sila! Pick mo na lang, pre!`;
             }
@@ -1178,7 +1094,7 @@ export function WeatherChatbot({ selectedRegion }: { selectedRegion: string }) {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'bot',
-      text: `📍 **${selectedRegion || 'Philippines'}**\n${getGreeting()} Ako si Kuya Weather — your everyday Philippine weather decision assistant.\n\nSubukan magtanong tungkol sa:\n• **Current weather & Heat Index** sa inyong lugar\n• **7-Day Rain & Thunderstorm** forecast\n• **Travel Safety & Flood Risk** advisory\n• **Side-by-Side Comparison** ng dalawang probinsya/cities`,
+      text: `📍 **${selectedRegion || 'Philippines'}**\n${getGreeting()} Ako si Kuya Weather — your everyday Philippine weather decision assistant.\n\nSubukan magtanong tungkol sa:\n• **Current weather & Heat Index** sa inyong lugar\n• **7-Day Rain & Thunderstorm** forecast\n• **Trip suitability & preparedness** advisory\n• **Side-by-Side Comparison** ng dalawang probinsya/cities`,
       followUps: [
         `Weather ngayon sa ${selectedRegion || 'NCR'}?`,
         `Uulan ba sa ${selectedRegion || 'Cebu'}?`,
@@ -1256,7 +1172,7 @@ export function WeatherChatbot({ selectedRegion }: { selectedRegion: string }) {
               </div>
               <div>
                 <h3 className="chatbot-title">Kuya Weather</h3>
-                <span className="chatbot-subtitle">Live Meteorological Intelligence</span>
+                <span className="chatbot-subtitle">Rule-based forecast guide · Open-Meteo</span>
               </div>
             </div>
             <button className="chatbot-close" onClick={() => setOpen(false)} aria-label="Close chatbot">

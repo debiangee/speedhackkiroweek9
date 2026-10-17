@@ -464,8 +464,8 @@ export interface ExperienceReport {
 }
 
 export function deriveExperienceReport(sim: WeatherSimulationState): ExperienceReport {
-  let roadStatus = 'Dry & clear pavement';
-  if (sim.wetness > 0.75) roadStatus = 'Waterlogged with standing puddles';
+  let roadStatus = 'Dry-weather simulation; actual pavement unknown';
+  if (sim.wetness > 0.75) roadStatus = 'Heavy-rain simulation; standing water unverified';
   else if (sim.wetness > 0.45) roadStatus = 'Slick & very wet asphalt';
   else if (sim.wetness > 0.15) roadStatus = 'Damp surface, light spray';
 
@@ -485,7 +485,7 @@ export function deriveExperienceReport(sim: WeatherSimulationState): ExperienceR
   else if (sim.solarPhase === 'morning') lightingStatus = 'Morning daylight';
   else if (sim.cloudCoverage > 80 || sim.stormIntensity > 0.5) lightingStatus = 'Dim / overcast storm lighting';
 
-  let travelSafety = 'Safe for regular travel';
+  let travelSafety = 'Lower modeled weather impact; road conditions unknown';
   if (sim.stormIntensity > 0.7 || sim.windSpeedKmh > 55 || sim.rainIntensity > 0.8) {
     travelSafety = 'High risk — stay indoors if possible';
   } else if (sim.rainIntensity > 0.4 || sim.windSpeedKmh > 35) {

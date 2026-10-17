@@ -21,27 +21,28 @@ export function EvacuationPanel({ lat, lon, region }: EvacuationPanelProps) {
   const displayCenters = centers.slice(0, 10);
 
   return (
-    <section className="evacuation-panel" aria-label="Evacuation Centers">
+    <section className="evacuation-panel" aria-label="Mapped facilities — status unverified">
       <header className="evacuation-header">
         <span className="evacuation-icon" aria-hidden="true">
           <ShieldIcon size={20} color="var(--accent)" />
         </span>
         <div className="evacuation-header-text">
-          <h3 className="evacuation-title">Evacuation Centers</h3>
+          <h3 className="evacuation-title">Mapped facilities — status unverified</h3>
           <p className="evacuation-subtitle">
-            Within {searchRadius}km of your location
+            Within {searchRadius}km of the selected forecast point
             {region && <span className="evacuation-region"> — {region}</span>}
           </p>
         </div>
       </header>
 
+      <p>OpenStreetMap results may include general shelters, civic buildings and assembly points. These are not verified operational evacuation centers. Confirm opening, capacity, accessibility and suitability with your local DRRMO/LGU before traveling.</p>
       {loading && <EvacuationSkeleton />}
 
       {error && (
         <div className="evacuation-error" role="alert">
           <AlertCircleIcon size={18} color="#dc2626" className="evacuation-error-icon" />
           <p className="evacuation-error-text">
-            Unable to load evacuation centers. {error}
+            Unable to load mapped facilities. {error}
           </p>
         </div>
       )}
@@ -49,12 +50,12 @@ export function EvacuationPanel({ lat, lon, region }: EvacuationPanelProps) {
       {!loading && !error && displayCenters.length === 0 && (
         <div className="evacuation-empty">
           <MapPinIcon size={20} color="var(--text-muted)" className="evacuation-empty-icon" />
-          <p className="evacuation-empty-text">No evacuation centers found within {searchRadius}km.</p>
+          <p className="evacuation-empty-text">No mapped facilities found within {searchRadius}km.</p>
         </div>
       )}
 
       {!loading && !error && displayCenters.length > 0 && (
-        <ul className="evacuation-list" aria-label="List of evacuation centers">
+        <ul className="evacuation-list" aria-label="List of mapped facilities">
           {displayCenters.map((center, index) => (
             <li
               key={center.id}
@@ -95,7 +96,7 @@ export function EvacuationPanel({ lat, lon, region }: EvacuationPanelProps) {
 
 function EvacuationSkeleton() {
   return (
-    <div className="evacuation-skeleton" aria-label="Loading evacuation centers">
+    <div className="evacuation-skeleton" aria-label="Loading mapped facilities">
       {[0, 1, 2].map((i) => (
         <div key={i} className="evacuation-skeleton-card" aria-hidden="true">
           <div className="evacuation-skeleton-icon" />

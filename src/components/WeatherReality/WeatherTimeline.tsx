@@ -1,4 +1,3 @@
-import React from 'react';
 import { HourlyData } from '../../hooks/useWeatherData';
 import { isRainCondition } from '../../utils/weatherSimulation';
 import { CloudRainIcon, SunIcon, CloudIcon, CloudLightningIcon, ClockIcon } from '../Icons';
@@ -24,7 +23,7 @@ export function WeatherTimeline({ hourly, selectedIndex, onSelectIndex }: Weathe
         </div>
         {selectedIndex > 0 && (
           <button className="live-reset-btn" onClick={() => onSelectIndex(0)}>
-            Return to Live
+            First forecast hour
           </button>
         )}
       </div>
@@ -36,7 +35,7 @@ export function WeatherTimeline({ hourly, selectedIndex, onSelectIndex }: Weathe
             const hourNum = entry.hour ?? new Date(entry.time).getHours();
             const h12 = hourNum % 12 === 0 ? 12 : hourNum % 12;
             const ampm = hourNum < 12 ? 'AM' : 'PM';
-            const label = idx === 0 ? 'NOW' : `${h12}${ampm}`;
+            const label = `${h12}${ampm}`;
 
             const isRaining = isRainCondition(entry.weather_code, entry.precipitation);
 

@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import type { SurgeResult, SurgeWindow } from '../utils/surge-engine';
-import { getMultiplierLabel, formatHour } from '../utils/surge-engine';
+import { formatHour } from '../utils/surge-engine';
 import { CloudRainIcon, CarIcon, BanknoteIcon, WavesIcon, ZapIcon, AlertCircleIcon, ClockIcon } from './Icons';
 import './SurgeTimeline.css';
 
@@ -80,22 +80,22 @@ export function SurgeTimeline({ results, bestWindow, peakWindow, currentHour }: 
 
         <div className="timeline-window-chips">
           {peakWindow && (
-            <div className="window-chip peak" title="High surge period — avoid booking if flexible">
+            <div className="window-chip peak" title="Higher modeled demand period">
               <AlertCircleIcon size={13} color="#dc2626" />
               <span>Avoid Peak: <strong>{formatHour(peakWindow.startHour)} – {formatHour(peakWindow.endHour)}</strong></span>
             </div>
           )}
           {bestWindow && (
-            <div className="window-chip best" title="Low demand period — lowest fares and fastest pickups">
+            <div className="window-chip best" title="Lower modeled demand period; actual availability unknown">
               <ZapIcon size={13} color="#16a34a" />
-              <span>Best Rates: <strong>{formatHour(bestWindow.startHour)} – {formatHour(bestWindow.endHour)}</strong></span>
+              <span>Lower score: <strong>{formatHour(bestWindow.startHour)} – {formatHour(bestWindow.endHour)}</strong></span>
             </div>
           )}
         </div>
       </div>
 
       <p className="timeline-helper-text">
-        24-Hour Fare Surge Forecast · Green represents standard base fares, while orange/red represent peak surge pricing.
+        Hourly heuristic demand score. Colors indicate model output, not observed prices or traffic.
       </p>
 
       {/* Chart Surface */}
@@ -156,7 +156,7 @@ export function SurgeTimeline({ results, bestWindow, peakWindow, currentHour }: 
                       <span className={`tooltip-level level-text-${r.level.toLowerCase()}`}>{r.level} DEMAND</span>
                       <span className="tooltip-score">{r.score}/100</span>
                     </div>
-                    <div className="tooltip-pricing">Est. pricing: <strong>{getMultiplierLabel(r.level)}</strong></div>
+                    <div className="tooltip-pricing">Est. pricing: <strong>{r.level} modeled demand</strong></div>
                     <div className="tooltip-factor">
                       <span className="tooltip-factor-label">Top factor:</span>
                       <span className="tooltip-factor-badge">

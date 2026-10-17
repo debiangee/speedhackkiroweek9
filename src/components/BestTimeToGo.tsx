@@ -1,4 +1,5 @@
 import { CheckCircleIcon, CloudRainIcon, SunIcon } from './Icons';
+import { remainingForecast } from '../utils/time';
 import type { HourlyData } from '../hooks/useWeatherData';
 import './BestTimeToGo.css';
 
@@ -18,6 +19,7 @@ function formatWindow(start: number, end: number): string {
 }
 
 export function BestTimeToGo({ hourly }: Props) {
+  hourly = remainingForecast(hourly);
   if (hourly.length < 3) return null;
 
   let bestStart = 0;

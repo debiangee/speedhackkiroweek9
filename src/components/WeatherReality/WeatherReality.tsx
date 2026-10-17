@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { HourlyData } from '../../hooks/useWeatherData';
 import {
   WeatherSimulationState,
@@ -23,6 +23,7 @@ import {
   LayersIcon,
 } from '../Icons';
 import './WeatherReality.css';
+import { remainingForecast } from '../../utils/time';
 
 interface WeatherRealityProps {
   region: string;
@@ -41,6 +42,7 @@ export function WeatherReality({
   isModal = false,
   onClose,
 }: WeatherRealityProps) {
+  hourly = remainingForecast(hourly);
   const [timelineIndex, setTimelineIndex] = useState(initialForecastHourOffset);
   const [viewMode, setViewMode] = useState<'street' | 'map' | 'split'>('street');
   const [showOverlay, setShowOverlay] = useState(true);
@@ -98,7 +100,7 @@ export function WeatherReality({
     return mapWeatherToSimulation(currentEntry);
   }, [hourly, timelineIndex]);
 
-  const isForecastMode = timelineIndex > 0;
+  const isForecastMode = true;
 
   return (
     <div className={`weather-reality-card ${isExpanded ? 'fullscreen-mode' : ''}`}>
@@ -202,6 +204,7 @@ export function WeatherReality({
         </div>
       )}
 
+      <p>Imagery is a curated regional landmark, not necessarily the selected city. Weather uses the selected forecast point and does not verify conditions at the landmark.</p>
       {/* Main Viewport Container */}
       <div className="simulation-stage-container">
         <div className={`simulation-stage view-mode-${viewMode}`}>

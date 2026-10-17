@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useWeatherData } from '../hooks/useWeatherData';
+import { remainingForecast } from '../utils/time';
 import { REGIONS } from '../utils/regions';
 import { getCitiesForRegion, getCityCoords } from '../utils/cities';
 import { computeVerdict, findTravelWindows, getTripAdvice } from '../utils/trip-verdict';
@@ -63,7 +64,7 @@ export function TripGoChecker({ hourly, daily, region }: Props) {
   const cityCoords = useMemo(() => {
     return destCity && destRegion ? getCityCoords(destRegion, destCity) : null;
   }, [destCity, destRegion]);
-  const useDestData = destRegion !== '' && destRegion !== region;
+  const useDestData = destRegion !== ''; // City identity matters even within the dashboard region.
 
   const {
     hourly: destHourly,
@@ -87,7 +88,7 @@ export function TripGoChecker({ hourly, daily, region }: Props) {
     if (activeDaily.length === 0) return activeHourly.slice(0, 24);
     const dayDate = activeDaily[selectedDay]?.date;
     if (!dayDate) return [];
-    return activeHourly.filter((h) => h.date === dayDate);
+    return remainingForecast(activeHourly.filter((h) => h.date === dayDate));
   }, [activeHourly, activeDaily, selectedDay]);
 
   // Compute verdict
@@ -123,6 +124,7 @@ export function TripGoChecker({ hourly, daily, region }: Props) {
 
   return (
     <div className="trip-go-checker">
+      <p>Forecast-based suitability only. No road, flood, traffic or operational transport conditions are verified. Unknown weather produces no verdict.</p>
       {/* Destination selector */}
       <div className="tgc-destination">
         <div className="tgc-select-group">
@@ -183,6 +185,7 @@ export function TripGoChecker({ hourly, daily, region }: Props) {
         </div>
       )}
 
+      {destRegion && !isLoading && !error && !verdict && <p role="status">Suitability unavailable: missing critical weather data or no remaining forecast hours.</p>}
       {/* Verdict display */}
       {destRegion && !isLoading && !error && verdict && (
         <>
@@ -211,7 +214,7 @@ export function TripGoChecker({ hourly, daily, region }: Props) {
               {verdict.verdict === 'NO-GO' && <CloudRainIcon size={28} color="white" />}
             </div>
             <div className="tgc-verdict-text">
-              <h3 className="tgc-verdict-label">{verdict.verdict === 'GO' ? 'Good to Go!' : verdict.verdict === 'CAUTION' ? 'Proceed with Caution' : 'Not Worth It'}</h3>
+              <h3 className="tgc-verdict-label">{verdict.verdict === 'GO' ? 'Lower forecast disruption' : verdict.verdict === 'CAUTION' ? 'Proceed with Caution' : 'Consider postponing'}</h3>
               <p className="tgc-verdict-summary">{verdict.summary}</p>
             </div>
             <div className="tgc-verdict-score">

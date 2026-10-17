@@ -39,7 +39,7 @@ function getProviderFullName(mode: string): string {
 function getSeverityBadge(severity: TransportImpact['severity']): { text: string; className: string } {
   switch (severity) {
     case 'good':
-      return { text: 'Normal Fares', className: 'badge-good' };
+      return { text: 'Planning context', className: 'badge-good' };
     case 'moderate':
       return { text: 'Moderate Demand', className: 'badge-moderate' };
     case 'poor':
@@ -53,7 +53,7 @@ function getSeverityBadge(severity: TransportImpact['severity']): { text: string
 
 export function TransportModeCards({ impacts }: Props) {
   return (
-    <div className="transport-modes" role="list" aria-label="Transport provider fare and condition status">
+    <div className="transport-modes" role="list" aria-label="Transport planning context">
       {impacts.map((impact) => {
         const badge = getSeverityBadge(impact.severity);
         return (

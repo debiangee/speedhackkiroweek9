@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { SurgeResult } from '../utils/surge-engine';
 import { formatHour } from '../utils/surge-engine';
-import { CheckCircleIcon, AlertCircleIcon, ZapIcon, ClockIcon } from './Icons';
+import { CheckCircleIcon, ZapIcon, ClockIcon } from './Icons';
 import './SurgeAlert.css';
 
 interface Props {

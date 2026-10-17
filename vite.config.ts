@@ -9,7 +9,7 @@ export default defineConfig({
     chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
-        manualChunks(id) {
+        manualChunks(id: string) {
           if (id.includes('node_modules')) {
             if (id.includes('react-dom') || id.includes('/react/') || id.includes('scheduler')) {
               return 'react-vendor';

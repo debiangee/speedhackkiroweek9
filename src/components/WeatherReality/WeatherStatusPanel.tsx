@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { WeatherSimulationState, deriveExperienceReport } from '../../utils/weatherSimulation';
 import {
   ThermometerIcon,

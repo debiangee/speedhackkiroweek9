@@ -46,8 +46,8 @@ const REGION_NAME_MAP: Record<string, string> = {
 
 interface RegionRain {
   region: string;
-  rainMm: number;
-  probability: number;
+  rainMm: number | null;
+  probability: number | null;
 }
 
 interface GeoFeature {
@@ -137,13 +137,15 @@ export function RainHeatmap() {
           try {
             const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&hourly=precipitation,precipitation_probability&timezone=Asia/Manila&forecast_days=1`;
             const res = await fetch(url);
-            if (!res.ok) return { region, rainMm: 0, probability: 0 };
+            if (!res.ok) return { region, rainMm: null, probability: null };
             const json = await res.json();
+            const valid = ['precipitation', 'precipitation_probability'].every(key => Array.isArray(json.hourly?.[key]) && json.hourly[key].length === 24 && json.hourly[key].every((v: unknown) => typeof v === 'number' && Number.isFinite(v) && v >= 0));
+            if (!valid) return { region, rainMm: null, probability: null };
             const totalRain = (json.hourly?.precipitation || []).reduce((s: number, v: number) => s + (v || 0), 0);
             const avgProb = (json.hourly?.precipitation_probability || []).reduce((s: number, v: number) => s + (v || 0), 0) / 24;
             return { region, rainMm: Math.round(totalRain * 10) / 10, probability: Math.round(avgProb) };
           } catch {
-            return { region, rainMm: 0, probability: 0 };
+            return { region, rainMm: null, probability: null };
           }
         });
 
@@ -187,6 +189,7 @@ export function RainHeatmap() {
 
   return (
     <div className="rain-heatmap">
+      <p>Gray regions: data unavailable. Point forecasts represent selected regional reference locations, not uniform conditions across a region.</p>
       {/* GeoJSON Map */}
       <div className="heatmap-map">
         <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} className="heatmap-svg">
@@ -198,7 +201,7 @@ export function RainHeatmap() {
             const geoName = feature.properties.REGION;
             const regionKey = REGION_NAME_MAP[geoName] || geoName;
             const regionRain = rainByRegion.get(regionKey);
-            const rainMm = regionRain?.rainMm ?? 0;
+            const rainMm = regionRain?.rainMm ?? null;
             const pathData = geometryToPath(feature.geometry);
             const isHovered = hoveredRegion === regionKey;
 
@@ -206,10 +209,13 @@ export function RainHeatmap() {
               <path
                 key={geoName}
                 d={pathData}
-                fill={getRainFill(rainMm)}
-                stroke={isHovered ? getRainColor(rainMm) : 'rgba(255,255,255,0.25)'}
+                fill={rainMm === null ? 'var(--border)' : getRainFill(rainMm)}
+                stroke={isHovered && rainMm !== null ? getRainColor(rainMm) : 'rgba(255,255,255,0.25)'}
                 strokeWidth={isHovered ? 1.5 : 0.5}
                 className="heatmap-region-path"
+                tabIndex={0}
+                aria-label={`${regionKey}: ${rainMm === null ? 'data unavailable' : `${rainMm} mm forecast rain`}`}
+                onFocus={() => setHoveredRegion(regionKey)}
                 onMouseEnter={() => setHoveredRegion(regionKey)}
                 onMouseLeave={() => setHoveredRegion(null)}
               />
@@ -219,12 +225,12 @@ export function RainHeatmap() {
           {/* Rain amount labels */}
           {data.map((d) => {
             const coords = REGION_COORDS[d.region];
-            if (!coords || d.rainMm === 0) return null;
+            if (!coords || d.rainMm === null || d.rainMm === 0) return null;
             const x = projectX(coords.lon);
             const y = projectY(coords.lat);
             return (
               <g key={d.region + '-label'}>
-                <circle cx={x} cy={y} r={10} fill={getRainColor(d.rainMm)} opacity={0.85} />
+                <circle cx={x} cy={y} r={10} fill={getRainColor(d.rainMm ?? 0)} opacity={0.85} />
                 <text x={x} y={y + 3} textAnchor="middle" fontSize="6.5" fill="#fff" fontWeight="700">
                   {d.rainMm.toFixed(0)}
                 </text>
@@ -237,7 +243,7 @@ export function RainHeatmap() {
         {hoveredData && (
           <div className="heatmap-tooltip">
             <strong>{hoveredData.region}</strong>
-            <span>{hoveredData.rainMm}mm · {hoveredData.probability}% chance</span>
+            <span>{hoveredData.rainMm === null ? 'Data unavailable' : `${hoveredData.rainMm}mm · ${hoveredData.probability}% mean hourly probability`}</span>
           </div>
         )}
       </div>
@@ -256,11 +262,11 @@ export function RainHeatmap() {
 
       {/* Top regions list */}
       <div className="heatmap-list">
-        {[...data].sort((a, b) => b.rainMm - a.rainMm).slice(0, 5).map((d) => (
+        {[...data].sort((a, b) => (b.rainMm ?? -1) - (a.rainMm ?? -1)).slice(0, 5).map((d) => (
           <div key={d.region} className="heatmap-row">
-            <DropletIcon size={12} color={getRainColor(d.rainMm)} />
+            <DropletIcon size={12} color={getRainColor(d.rainMm ?? 0)} />
             <span className="heatmap-region">{d.region}</span>
-            <span className="heatmap-val">{d.rainMm}mm</span>
+            <span className="heatmap-val">{d.rainMm === null ? 'Unavailable' : `${d.rainMm}mm`}</span>
             <span className="heatmap-prob">{d.probability}%</span>
           </div>
         ))}

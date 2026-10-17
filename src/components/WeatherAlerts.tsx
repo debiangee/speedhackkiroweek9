@@ -19,15 +19,15 @@ function generateAlerts(windSpeed: number, rainMm: number, region: string): Weat
     alerts.push({
       id: 'storm-' + region,
       severity: 'danger',
-      title: 'Storm Warning Signal #2',
-      message: `Winds exceeding ${Math.round(windSpeed)} km/h detected. Avoid travel to coastal areas. Check PAGASA for official storm signals.`,
+      title: 'Strong forecast wind indicator',
+      message: `Winds exceeding ${Math.round(windSpeed)} km/h forecast. Avoid travel to coastal areas. Check PAGASA for official storm signals.`,
       regions: [region],
     });
   } else if (windSpeed > 40) {
     alerts.push({
       id: 'wind-' + region,
       severity: 'warning',
-      title: 'Strong Wind Advisory',
+      title: 'Forecast wind indicator',
       message: `Wind speeds of ${Math.round(windSpeed)} km/h expected. Secure loose items and avoid unnecessary outdoor activities.`,
       regions: [region],
     });
@@ -37,15 +37,15 @@ function generateAlerts(windSpeed: number, rainMm: number, region: string): Weat
     alerts.push({
       id: 'flood-' + region,
       severity: 'danger',
-      title: 'Heavy Rain & Flood Warning',
-      message: `${Math.round(rainMm)}mm rainfall recorded. Flash flood risk is HIGH. Avoid low-lying areas and waterways.`,
+      title: 'High forecast rainfall indicator',
+      message: `${Math.round(rainMm)}mm rainfall forecast across nearby hours. Flood conditions are unknown. Avoid low-lying areas and waterways.`,
       regions: [region],
     });
   } else if (rainMm > 15) {
     alerts.push({
       id: 'rain-' + region,
       severity: 'warning',
-      title: 'Heavy Rain Advisory',
+      title: 'Forecast rainfall indicator',
       message: `${Math.round(rainMm)}mm rainfall expected. Carry rain gear and expect road flooding in low areas.`,
       regions: [region],
     });

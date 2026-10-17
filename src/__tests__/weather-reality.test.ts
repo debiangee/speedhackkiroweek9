@@ -1,10 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   mapWeatherToSimulation,
-  classifyWeatherCondition,
-  calculateRainIntensity,
   calculateWindEffect,
-  calculateFog,
   calculateSolarPhase,
   interpolateSimulationStates,
   deriveExperienceReport,
@@ -163,11 +160,11 @@ describe('Weather Reality Simulation Engine — Strict Meteorological Accuracy',
       const sunnySim = mapWeatherToSimulation({ ...mockBaseHourly, weather_code: 0, precipitation: 0 });
       const sunnyExp = deriveExperienceReport(sunnySim);
       expect(sunnyExp.roadStatus).toContain('Dry');
-      expect(sunnyExp.travelSafety).toContain('Safe');
+      expect(sunnyExp.travelSafety).toContain('road conditions unknown');
 
       const stormSim = mapWeatherToSimulation({ ...mockBaseHourly, weather_code: 95, precipitation: 15 });
       const stormExp = deriveExperienceReport(stormSim);
-      expect(stormExp.roadStatus).toContain('Waterlogged');
+      expect(stormExp.roadStatus).toContain('standing water unverified');
       expect(stormExp.travelSafety).toContain('High risk');
     });
   });

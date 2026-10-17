@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getCached, setCache, getStaleCached } from './useWeatherCache';
-
-// Region center coordinates for Open-Meteo API queries
+import { getCached, setCache } from './useWeatherCache';
+import { parseForecast, FORECAST_FIELDS } from '../services/forecast-parser';
+import { hasCriticalData } from '../utils/trip-verdict';
+import { manilaDate } from '../utils/time';
 const REGION_COORDS: Record<string, { lat: number; lon: number }> = {
   'NCR': { lat: 14.5995, lon: 120.9842 },
   'CAR': { lat: 16.4023, lon: 120.596 },
@@ -63,211 +64,52 @@ export interface WeatherState {
   lastUpdated: string | null;
 }
 
-// Fetch with retry on 429 (rate limit)
-async function fetchWithRetry(url: string, retries = 3): Promise<Response> {
-  for (let attempt = 0; attempt < retries; attempt++) {
-    const response = await fetch(url);
-    if (response.ok) return response;
-    if (response.status === 429 && attempt < retries - 1) {
-      // Wait before retry: 2s, 4s, 8s
-      await new Promise((r) => setTimeout(r, 2000 * Math.pow(2, attempt)));
-      continue;
-    }
-    throw new Error(
-      response.status === 429
-        ? 'Weather service is busy. Please wait a moment and try again.'
-        : `Weather API error: ${response.status}`
-    );
-  }
-  throw new Error('Failed after retries');
-}
 
+interface CachedForecast { hourly: HourlyData[]; daily: DailySummary[]; retrievedAt: number }
+const empty: WeatherState = { loading: true, error: null, hourly: [], daily: [], lastUpdated: null };
 export function useWeatherData(region: string, cityCoords?: { lat: number; lon: number } | null) {
-  const [state, setState] = useState<WeatherState>({
-    loading: true,
-    error: null,
-    hourly: [],
-    daily: [],
-    lastUpdated: null,
-  });
-
-  // Debounce: wait 300ms before fetching to avoid rapid-fire calls
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Stabilize coords to primitives to avoid referential loops
-  const coordsLat = cityCoords?.lat ?? REGION_COORDS[region]?.lat ?? null;
-  const coordsLon = cityCoords?.lon ?? REGION_COORDS[region]?.lon ?? null;
-
-  const fetchData = useCallback(async () => {
-    if (coordsLat === null || coordsLon === null) {
-      setState((prev) => ({ ...prev, loading: false, error: 'Unknown region' }));
-      return;
-    }
-    const coords = { lat: coordsLat, lon: coordsLon };
-
-    // Check cache first (60 min TTL)
-    const cacheKey = `weather-${coords.lat}-${coords.lon}`;
-    const cached = getCached<{ hourly: HourlyData[]; daily: DailySummary[] }>(cacheKey);
-    if (cached) {
-      setState({
-        loading: false,
-        error: null,
-        hourly: cached.hourly,
-        daily: cached.daily,
-        lastUpdated: 'cached',
-      });
-      return;
-    }
-
-    setState((prev) => ({ ...prev, loading: true, error: null }));
-
-    try {
-      // Fetch hourly data with extended variables for better accuracy
-      const hourlyVars = [
-        'temperature_2m',
-        'relative_humidity_2m',
-        'dew_point_2m',
-        'precipitation',
-        'precipitation_probability',
-        'wind_speed_10m',
-        'wind_gusts_10m',
-        'weather_code',
-        'cloud_cover',
-        'visibility',
-        'uv_index',
-      ].join(',');
-
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&hourly=${hourlyVars}&timezone=Asia/Manila&forecast_days=7`;
-
-      const response = await fetchWithRetry(url);
-      const data = await response.json();
-      const hourly: HourlyData[] = [];
-      const dailyMap: Map<string, {
-        probs: number[];
-        rains: number[];
-        temps: number[];
-        humidities: number[];
-        winds: number[];
-        gusts: number[];
-        weatherCodes: number[];
-      }> = new Map();
-
-      for (let i = 0; i < data.hourly.time.length; i++) {
-        const time = data.hourly.time[i];
-        const date = time.split('T')[0];
-        const hour = parseInt(time.split('T')[1].split(':')[0], 10);
-
-        const entry: HourlyData = {
-          time,
-          date,
-          hour,
-          temperature: data.hourly.temperature_2m[i] ?? 0,
-          humidity: data.hourly.relative_humidity_2m[i] ?? 0,
-          precipitation: data.hourly.precipitation[i] ?? 0,
-          precipitation_probability: data.hourly.precipitation_probability[i] ?? 0,
-          wind_speed: data.hourly.wind_speed_10m[i] ?? 0,
-          wind_gusts: data.hourly.wind_gusts_10m?.[i] ?? 0,
-          weather_code: data.hourly.weather_code[i] ?? 0,
-          cloud_cover: data.hourly.cloud_cover?.[i] ?? 0,
-          dew_point: data.hourly.dew_point_2m?.[i] ?? 0,
-          visibility: data.hourly.visibility?.[i] ?? 10000,
-          uv_index: data.hourly.uv_index?.[i] ?? 0,
-        };
-
-        hourly.push(entry);
-
-        if (!dailyMap.has(date)) {
-          dailyMap.set(date, { probs: [], rains: [], temps: [], humidities: [], winds: [], gusts: [], weatherCodes: [] });
-        }
-        const day = dailyMap.get(date)!;
-        day.probs.push(entry.precipitation_probability);
-        day.rains.push(entry.precipitation);
-        day.temps.push(entry.temperature);
-        day.humidities.push(entry.humidity);
-        day.winds.push(entry.wind_speed);
-        day.gusts.push(entry.wind_gusts);
-        day.weatherCodes.push(entry.weather_code);
-      }
-
-      const daily: DailySummary[] = [];
-      for (const [date, stats] of dailyMap.entries()) {
-        // Count rain vs dry hours using probability threshold
-        const rainHours = stats.probs.filter((p) => p >= 30).length;
-        const dryHours = stats.probs.length - rainHours;
-
-        // Find dominant weather code (most frequent)
-        const codeFreq = new Map<number, number>();
-        for (const code of stats.weatherCodes) {
-          codeFreq.set(code, (codeFreq.get(code) || 0) + 1);
-        }
-        let dominantCode = 0;
-        let maxFreq = 0;
-        for (const [code, freq] of codeFreq) {
-          if (freq > maxFreq) { dominantCode = code; maxFreq = freq; }
-        }
-
-        daily.push({
-          date,
-          avg_prob: Math.round(stats.probs.reduce((a, b) => a + b, 0) / stats.probs.length),
-          max_prob: Math.max(...stats.probs),
-          total_rain: Math.round(stats.rains.reduce((a, b) => a + b, 0) * 10) / 10,
-          avg_temp: Math.round((stats.temps.reduce((a, b) => a + b, 0) / stats.temps.length) * 10) / 10,
-          min_temp: Math.round(Math.min(...stats.temps) * 10) / 10,
-          max_temp: Math.round(Math.max(...stats.temps) * 10) / 10,
-          avg_humidity: Math.round(stats.humidities.reduce((a, b) => a + b, 0) / stats.humidities.length),
-          avg_wind: Math.round((stats.winds.reduce((a, b) => a + b, 0) / stats.winds.length) * 10) / 10,
-          max_wind_gusts: Math.round(Math.max(...stats.gusts) * 10) / 10,
-          dominant_weather_code: dominantCode,
-          rain_hours: rainHours,
-          dry_hours: dryHours,
-        });
-      }
-
-      setState({
-        loading: false,
-        error: null,
-        hourly,
-        daily,
-        lastUpdated: new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' }),
-      });
-
-      // Cache for 30 minutes
-      setCache(cacheKey, { hourly, daily });
-    } catch (err) {
-      // Try stale localStorage cache as fallback
-      const stale = getStaleCached<{ hourly: HourlyData[]; daily: DailySummary[] }>(cacheKey);
-      if (stale) {
-        setState({
-          loading: false,
-          error: null,
-          hourly: stale.hourly,
-          daily: stale.daily,
-          lastUpdated: 'offline (cached)',
-        });
+  const lat = cityCoords?.lat ?? REGION_COORDS[region]?.lat;
+  const lon = cityCoords?.lon ?? REGION_COORDS[region]?.lon;
+  const identity = `${lat},${lon}`;
+  const [state, setState] = useState<WeatherState & { identity?: string }>(empty);
+  const [revision, setRevision] = useState(0);
+  const generation = useRef(0);
+  const refetch = useCallback(() => setRevision(v => v + 1), []);
+  useEffect(() => {
+    const timer = setInterval(refetch, 5 * 60 * 1000);
+    const onVisible = () => { if (document.visibilityState === 'visible') refetch(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', onVisible); };
+  }, [refetch]);
+  useEffect(() => {
+    const request = ++generation.current;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    const commit = (next: WeatherState) => { if (request === generation.current) setState({ ...next, identity }); };
+    async function load() {
+      if (lat === undefined || lon === undefined) { commit({ ...empty, loading: false, error: 'Unknown location' }); return; }
+      const key = `forecast-v2-${lat}-${lon}`;
+      const cached = getCached<CachedForecast>(key);
+      if (cached && Array.isArray(cached.hourly) && cached.hourly.length > 0 && cached.hourly.every(hasCriticalData) && Number.isFinite(cached.retrievedAt) && Array.isArray(cached.daily) && cached.daily.some(d => d.date === manilaDate())) {
+        commit({ ...cached, loading: false, error: null, lastUpdated: `Cached forecast · retrieved ${new Date(cached.retrievedAt).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })} (PHT); valid cache ≤30 minutes` });
         return;
       }
-
-      setState((prev) => ({
-        ...prev,
-        loading: false,
-        error: err instanceof Error ? err.message : 'Failed to fetch weather data',
-      }));
+      commit({ ...empty, loading: true });
+      try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=${FORECAST_FIELDS.join(',')}&timezone=Asia/Manila&forecast_days=7`;
+        const response = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+        if (!response.ok) throw new Error(`Forecast provider unavailable (${response.status}). Please retry.`);
+        const forecast = parseForecast(await response.json());
+        if (controller.signal.aborted) return;
+        const retrievedAt = Date.now();
+        setCache(key, { ...forecast, retrievedAt });
+        commit({ ...forecast, loading: false, error: null, lastUpdated: `Open-Meteo forecast · retrieved ${new Date(retrievedAt).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })} (PHT)` });
+      } catch (err) {
+        commit({ ...empty, loading: false, error: controller.signal.aborted ? 'Forecast unavailable: request cancelled or timed out. Cached forecasts are not used beyond 30 minutes.' : err instanceof Error ? err.message : 'Forecast unavailable' });
+      }
     }
-  }, [region, coordsLat, coordsLon]);
-
-  useEffect(() => {
-    // Debounce: cancel previous timer, wait 300ms before fetching
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-    debounceRef.current = setTimeout(() => {
-      fetchData();
-    }, 300);
-
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [fetchData]);
-
-  return { ...state, refetch: fetchData };
+    const debounce = setTimeout(load, 150);
+    return () => { ++generation.current; clearTimeout(debounce); clearTimeout(timeout); controller.abort(); };
+  }, [lat, lon, identity, revision]);
+  return { ...(state.identity === identity ? state : empty), refetch };
 }

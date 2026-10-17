@@ -31,6 +31,7 @@ import { SkeletonLoader } from './SkeletonLoader';
 import { getRegionLabel } from '../utils/regions';
 import { getCityCoords } from '../utils/cities';
 import './Dashboard.css';
+import { manilaDate, manilaHour } from '../utils/time';
 
 // Lazy load heavy components
 const RainChart = lazy(() => import('./RainChart').then((m) => ({ default: m.RainChart })));
@@ -64,11 +65,16 @@ const REGION_COORDS: Record<string, { lat: number; lon: number }> = {
 export function Dashboard() {
   const [selectedRegion, setSelectedRegion] = useState('NCR');
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(() => manilaDate());
   const [compareMode, setCompareMode] = useState(false);
   const [realityHourOffset, setRealityHourOffset] = useState(0);
   const { favorites, toggleFavorite, removeFavorite, isFavorite } = useFavorites();
   const { detecting, error: geoError, detect } = useGeolocation();
+
+  useEffect(() => {
+    const interval = setInterval(() => { setSelectedDate(date => date < manilaDate() ? manilaDate() : date); }, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Listen for Kuya Weather reality simulation triggers
   useEffect(() => {
@@ -158,7 +164,7 @@ export function Dashboard() {
   });
 
   // Compute current conditions for weather alerts
-  const currentHour = new Date().getHours();
+  const currentHour = manilaHour();
   const recentHourly = todayHourly.filter((h) => Math.abs(h.hour - currentHour) <= 2);
   const maxWind = recentHourly.length > 0 ? Math.max(...recentHourly.map((h) => h.wind_speed)) : 0;
   const maxRain = recentHourly.length > 0 ? recentHourly.reduce((s, h) => s + h.precipitation, 0) : 0;
@@ -295,7 +301,7 @@ export function Dashboard() {
             <div className="section-header">
               <TrendingUpIcon size={18} color="var(--accent)" />
               <h2 className="section-title">Smart Optimizer</h2>
-              <span className="section-badge">AI Loop</span>
+              <span className="section-badge">Rule-based</span>
             </div>
             <p className="section-desc">
               Tell us your goal — the optimizer analyzes weather signals and finds your best window.
@@ -319,18 +325,18 @@ export function Dashboard() {
               <AlertCircleIcon size={18} color="var(--accent)" />
               <h2 className="section-title">Conditions & Alerts</h2>
             </div>
-            <p className="section-desc">Umbrella, flood risk, riding conditions</p>
+            <p className="section-desc">Rain, wind and preparedness guidance</p>
             <SmartRecommendations hourly={todayHourly} region={selectedRegion} />
           </div>
 
-          {/* Transport Surge Predictor */}
+          {/* Transport Demand Estimate */}
           <div className="section-card section-card-highlight">
             <div className="section-header">
               <TrendingUpIcon size={18} color="var(--accent)" />
-              <h2 className="section-title">Transport Surge Predictor</h2>
-              <span className="section-badge">Live</span>
+              <h2 className="section-title">Transport Demand Estimate</h2>
+              <span className="section-badge">Provider data</span>
             </div>
-            <p className="section-desc">Real-time fare estimates for Grab, Angkas, and commute routes based on weather & traffic demand</p>
+            <p className="section-desc">Heuristic weather and calendar demand indicators. No live fare, traffic or driver availability data.</p>
             <ErrorBoundary>
               <Suspense fallback={<p className="lazy-loading">Loading surge predictions...</p>}>
                 <TransportSurgePredictor
@@ -349,7 +355,7 @@ export function Dashboard() {
               <SunIcon size={18} color="var(--accent)" />
               <h2 className="section-title">Best Time to Go</h2>
             </div>
-            <p className="section-desc">Driest and rainiest 3-hour windows today</p>
+            <p className="section-desc">Three-hour windows for the selected date; consult current forecasts before leaving</p>
             <BestTimeToGo hourly={todayHourly} />
           </div>
 
@@ -386,7 +392,7 @@ export function Dashboard() {
             <p className="section-desc">How this week compares to the same period last year</p>
             <ErrorBoundary>
               <Suspense fallback={<p className="lazy-loading">Loading historical data...</p>}>
-                <HistoricalComparison daily={daily} region={selectedRegion} coords={regionCoords} />
+                <HistoricalComparison daily={daily} region={selectedRegion} coords={cityCoords ?? regionCoords} />
               </Suspense>
             </ErrorBoundary>
           </div>
@@ -396,7 +402,7 @@ export function Dashboard() {
             <div className="section-header">
               <DropletIcon size={18} color="var(--accent)" />
               <h2 className="section-title">Weather Risk Map</h2>
-              <span className="section-badge">Live</span>
+              <span className="section-badge">Provider data</span>
             </div>
             <p className="section-desc">Live rain radar over the Philippines — powered by RainViewer</p>
             <ErrorBoundary>

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { WeatherSimulationState } from '../../utils/weatherSimulation';
 
 interface WeatherOverlayProps {
@@ -7,6 +7,13 @@ interface WeatherOverlayProps {
 }
 
 export function WeatherOverlay({ simState, enabled = true }: WeatherOverlayProps) {
+  const [reduced, setReduced] = useState(() => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? true);
+  useEffect(() => {
+    const media = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+    const update = () => setReduced(media?.matches ?? true);
+    media?.addEventListener('change', update);
+    return () => media?.removeEventListener('change', update);
+  }, []);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -29,7 +36,7 @@ export function WeatherOverlay({ simState, enabled = true }: WeatherOverlayProps
     // CRITICAL REQUIREMENT: NO RAIN DATA = NO RAIN PARTICLES
     // If overlay is disabled or weather is dry (0 mm precipitation / non-rain condition):
     // Clear canvas immediately and do NOT run particle loop!
-    if (!enabled) {
+    if (!enabled || reduced) {
       ctx.clearRect(0, 0, width, height);
       return () => window.removeEventListener('resize', handleResize);
     }
@@ -119,7 +126,7 @@ export function WeatherOverlay({ simState, enabled = true }: WeatherOverlayProps
       cancelAnimationFrame(animId);
       window.removeEventListener('resize', handleResize);
     };
-  }, [simState, enabled]);
+  }, [simState, enabled, reduced]);
 
   if (!enabled) return null;
 
